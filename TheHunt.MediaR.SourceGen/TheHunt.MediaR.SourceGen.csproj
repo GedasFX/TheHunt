@@ -2,10 +2,8 @@
 
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
-        <LangVersion>11</LangVersion>
-
-<!--        <GeneratePackageOnBuild>true</GeneratePackageOnBuild> &lt;!&ndash; Generates a package at build &ndash;&gt;-->
-<!--        <IncludeBuildOutput>false</IncludeBuildOutput> &lt;!&ndash; Do not include the generator as a lib dependency &ndash;&gt;-->
+        <LangVersion>10</LangVersion>
+        <Nullable>enable</Nullable>
     </PropertyGroup>
 
     <ItemGroup>
@@ -14,11 +12,6 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-    </ItemGroup>
-
-    <ItemGroup>
-<!--        &lt;!&ndash; Package the generator in the analyzer directory of the nuget package &ndash;&gt;-->
-<!--        <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />-->
     </ItemGroup>
 
 </Project>

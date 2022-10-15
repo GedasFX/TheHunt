@@ -1,6 +1,0 @@
-﻿<Project>
-    <ItemGroup>
-        <CompilerVisibleProperty Include="MyGenerator_EnableLogging" />
-        <CompilerVisibleItemMetadata Include="Protobuf" MetadataName="MyGenerator_EnableLogging" />
-    </ItemGroup>
-</Project>
