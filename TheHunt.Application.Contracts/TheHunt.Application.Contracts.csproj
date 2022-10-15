@@ -6,11 +6,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Protobuf Include="Protos\*.proto" GrpcServices="Client,Server" />
+      <Protobuf Include="..\Protos\**\*.proto" Exclude="..\Protos\google\**" GrpcServices="Client,Server" />
     </ItemGroup>
 
     <ItemGroup>
       <PackageReference Include="GedasFX.SourceGenerators.gRPC.MediatR" Version="1.0.0-rc1" PrivateAssets="All" />
+      <PackageReference Include="Google.Api.CommonProtos" Version="2.6.0" />
       <PackageReference Include="Google.Protobuf" Version="3.21.7" />
       <PackageReference Include="Grpc.Net.ClientFactory" Version="2.49.0" />
       <PackageReference Include="Grpc.Tools" Version="2.49.1">
