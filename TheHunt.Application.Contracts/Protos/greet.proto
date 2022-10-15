@@ -1,13 +1,13 @@
 syntax = "proto3";
 
-option csharp_namespace = "TheHunt.Api";
-
-package greet;
+package TheHunt;
 
 // The greeting service definition.
 service Greeter {
   // Sends a greeting
   rpc SayHello (HelloRequest) returns (HelloReply);
+  rpc SayHello2 (HelloRequest) returns (HelloReply);
+  rpc GetState (GetStateQuery) returns (GetStateResponse);
 }
 
 // The request message containing the user's name.
@@ -18,4 +18,12 @@ message HelloRequest {
 // The response message containing the greetings.
 message HelloReply {
   string message = 1;
+}
+
+message GetStateQuery {
+  uint64 id =1;
+}
+
+message GetStateResponse {
+  repeated string items = 1;
 }

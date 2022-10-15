@@ -11,7 +11,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\TheHunt.Application.Contracts\TheHunt.Application.Contracts.csproj" />
+      <ProjectReference Include="..\TheHunt.Application\TheHunt.Application.csproj" />
     </ItemGroup>
 
 </Project>
