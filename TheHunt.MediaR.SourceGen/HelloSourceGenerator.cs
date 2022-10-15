@@ -16,6 +16,7 @@ namespace TheHunt.MediaR.SourceGen
 
         public void Execute(GeneratorExecutionContext context)
         {
+            //Debugger.Launch();
             if (context.SyntaxReceiver is not MySyntaxReceiver syntaxReceiver)
                 return;
 
@@ -52,6 +53,7 @@ namespace {namespaceGroup.Key}
 {sb}
 }}";
 
+                // SpinWait.SpinUntil(() => Debugger.IsAttached);
                 context.AddSource($"{namespaceGroup.Key.Replace('.', '_')}.g.cs", source);
             }
 
@@ -92,12 +94,13 @@ namespace {namespaceGroup.Key}
 //
 //             // Add the source code to the compilation
 //             context.AddSource($"{typeName}.g.cs", source);
+            context.AddSource("Source.g.cs", "namespace Aaaa { public class Source { } }");
         }
 
         public void Initialize(GeneratorInitializationContext context)
         {
             context.RegisterForSyntaxNotifications(() => new MySyntaxReceiver());
-            SpinWait.SpinUntil(() => Debugger.IsAttached);
+            // SpinWait.SpinUntil(() => Debugger.IsAttached);
         }
 
         private string GetMethodInfo(string requestClassType, string resultType)
