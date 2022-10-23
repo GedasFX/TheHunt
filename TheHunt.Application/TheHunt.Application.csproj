@@ -1,15 +1,27 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>netstandard2.1</TargetFramework>
+        <TargetFramework>net6.0</TargetFramework>
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\TheHunt.Application.Contracts\TheHunt.Application.Contracts.csproj" />
+      <Protobuf Include="..\Protos\**\*.proto" Exclude="..\Protos\google\**" GrpcServices="Client,Server" />
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\TheHunt.Domain\TheHunt.Domain.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="GedasFX.SourceGenerators.gRPC.MediatR" Version="1.2.1" PrivateAssets="All" />
+      <PackageReference Include="Google.Api.CommonProtos" Version="2.6.0" />
+      <PackageReference Include="Google.Protobuf" Version="3.21.8" />
+      <PackageReference Include="Grpc.Net.Common" Version="2.49.0" />
+      <PackageReference Include="Grpc.Tools" Version="2.50.0">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
       <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="11.0.0" />
     </ItemGroup>
 

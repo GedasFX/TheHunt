@@ -1,0 +1,23 @@
+﻿syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+package TheHunt;
+
+service Competition {
+  rpc CreateCompetition (CreateCompetitionCommand) returns (CreateCompetitionResponse);
+}
+
+message CreateCompetitionCommand {
+  string name = 1;
+  optional string description = 2;
+  
+  bool public = 3;
+  
+  google.protobuf.Timestamp start_date = 5;
+  google.protobuf.Timestamp end_date = 6;
+}
+
+message CreateCompetitionResponse {
+  string id = 1;
+}

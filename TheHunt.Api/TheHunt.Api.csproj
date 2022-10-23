@@ -10,6 +10,10 @@
         <PackageReference Include="Grpc.AspNetCore.Server" Version="2.49.0" />
         <PackageReference Include="Microsoft.AspNetCore.Grpc.JsonTranscoding" Version="7.0.0-rc.2.22476.2" />
         <PackageReference Include="Microsoft.AspNetCore.Grpc.Swagger" Version="0.3.0-rc.2.22476.2" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.10">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
     </ItemGroup>
 
     <ItemGroup>
