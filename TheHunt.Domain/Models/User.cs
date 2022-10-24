@@ -13,16 +13,14 @@ public class User
     [MaxLength(60)]
     [Column("username")]
     public string Username { get; set; } = null!;
-
-    [MaxLength(256)]
-    [Column("password_hash")]
-    public byte[] PasswordHash { get; set; } = null!;
     
-    [MaxLength(8)]
-    [Column("password_salt")]
-    public byte[] PasswordSalt { get; set; } = null!;
+    [MaxLength(60)]
+    [Column("password")]
+    public string Password { get; set; } = null!;
     
     [Column("created_at")]
-    [DefaultValue("current_timestamp at time zone 'utc'")]
     public DateTime CreatedAt { get; set; }
+    
+    [Column("last_login")]
+    public DateTime LastLogin { get; set; }
 }

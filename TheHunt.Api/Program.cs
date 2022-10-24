@@ -18,21 +18,23 @@ builder.Services.AddMediatR(typeof(GetCurrentBountyQueryHandler).Assembly);
 builder.Services.AddDbContext<AppDbContext>(o => o.UseNpgsql("Server=127.0.0.1;Port=5432;Database=TheHunt;User Id=postgres;Password=example;"));
 builder.Services.AddScoped<IRequestContextAccessor, RequestContextAccessor>();
 
+builder.Services.AddDataProtection();
+builder.Services.AddControllers();
 builder.Services.AddGrpc().AddJsonTranscoding();
 builder.Services.AddGrpcSwagger();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.AddSecurityDefinition("Basic", new OpenApiSecurityScheme()
+    c.AddSecurityDefinition("Token", new OpenApiSecurityScheme()
     {
         Name = HeaderNames.Authorization,
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.Http,
-        Scheme = "Basic",
+        Scheme = "Bearer",
     });
     c.AddSecurityRequirement(new OpenApiSecurityRequirement()
     {
         {
-            new OpenApiSecurityScheme() { Reference = new OpenApiReference() { Id = "Basic", Type = ReferenceType.SecurityScheme } },
+            new OpenApiSecurityScheme() { Reference = new OpenApiReference() { Id = "Token", Type = ReferenceType.SecurityScheme } },
             Array.Empty<string>()
         },
     });
@@ -51,6 +53,8 @@ app.MapGet("/", () =>
 app.UseMiddleware<AuthorizationMiddleware>();
 
 app.MapGrpcMediatorServices();
+
+app.MapControllers();
 
 app.UseSwagger();
 app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1"); });

@@ -1,19 +1,11 @@
-﻿using System;
-
-namespace TheHunt.Application.Helpers;
-
-public record RequestContext
-{
-    public Guid UserId { get; init; }
-    public string Username { get; init; } = null!;
-};
+﻿namespace TheHunt.Application.Helpers;
 
 public interface IRequestContextAccessor
 {
-    public RequestContext Context { get; set; }
+    public UserData Context { get; set; }
 }
 
 public class RequestContextAccessor : IRequestContextAccessor
 {
-    public RequestContext Context { get; set; } = new();
+    public UserData Context { get; set; } = new();
 }
