@@ -1,5 +1,4 @@
-﻿using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TheHunt.Domain.Models;
@@ -23,4 +22,6 @@ public class User
     
     [Column("last_login")]
     public DateTime LastLogin { get; set; }
+    
+    public ICollection<Competition>? Competitions { get; set; }
 }

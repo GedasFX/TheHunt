@@ -25,7 +25,7 @@ message CreateUserCommand {
 }
 
 message UserData {
-  bytes id = 1;
+  bytes user_id = 1;
   string username = 2;
   google.protobuf.Timestamp login_date = 3;
 }

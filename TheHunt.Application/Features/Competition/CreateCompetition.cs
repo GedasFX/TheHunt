@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
 using TheHunt.Application.Helpers;
@@ -19,16 +20,16 @@ public class CreateCompetitionCommandHandler : IRequestHandler<CreateCompetition
 
     public async Task<CreateCompetitionResponse> Handle(CreateCompetitionCommand request, CancellationToken cancellationToken)
     {
-        // var entity = new Domain.Models.Competition()
-        // {
-        //     Admin = new Domain.Models.User() { Id = _requestContextAccessor.Context.UserId }
-        // };
-        //
-        // _dbContext.Competitions.Add(entity);
-        // await _dbContext.SaveChangesAsync(cancellationToken);
-        //
-        // return new CreateCompetitionResponse() { Id = GuidUtils.ToString(entity.Id) };
-
-        return new CreateCompetitionResponse();
+        var entity = new Domain.Models.Competition()
+        {
+            Name = request.Name, Description = request.Description,
+            Admin = new Domain.Models.User() { Id = new Guid(_requestContextAccessor.Context.UserId.Span) },
+            
+        };
+        
+        _dbContext.Competitions.Add(entity);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        
+        return new CreateCompetitionResponse() { Id = GuidUtils.ToString(entity.Id) };
     }
 }

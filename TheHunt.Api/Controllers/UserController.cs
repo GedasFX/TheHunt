@@ -33,6 +33,6 @@ public class UserController : ControllerBase
         _dbContext.Attach(new Domain.Models.User() { Id = user.Id, LastLogin = DateTime.UtcNow }).Property(e => e.LastLogin).IsModified = true;
         await _dbContext.SaveChangesAsync();
 
-        return Ok(new { token = _protector.Protect(new UserData { Id = ByteString.CopyFrom(user.Id.ToByteArray()), Username = credentials.Username }.ToByteArray()) });
+        return Ok(new { token = _protector.Protect(new UserData { UserId = ByteString.CopyFrom(user.Id.ToByteArray()), Username = credentials.Username }.ToByteArray()) });
     }
 }
