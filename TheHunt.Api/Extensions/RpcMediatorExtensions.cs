@@ -6,6 +6,7 @@ public static class RpcMediatorExtensions
     {
         builder.MapGrpcService<Bounty.BountyService>();
         builder.MapGrpcService<User.UserService>();
+        builder.MapGrpcService<Competition.CompetitionService>();
 
         return builder;
     }

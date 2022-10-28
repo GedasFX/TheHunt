@@ -14,15 +14,8 @@ public class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<Competition>()
-            .HasMany(c => c.Members)
-            .WithMany(m => m.Competitions)
-            .UsingEntity(j => j.ToTable("competition_members"));
-
-        modelBuilder.Entity<Competition>()
-            .HasMany(c => c.Verifiers)
-            .WithMany(v => v.Competitions)
-            .UsingEntity(j => j.ToTable("competition_verifiers"));
+        modelBuilder.Entity<CompetitionUser>()
+            .HasKey(e => new { e.CompetitionId, e.UserId });
 
         base.OnModelCreating(modelBuilder);
     }

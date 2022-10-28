@@ -1,4 +1,5 @@
 ﻿using Google.Protobuf;
+using Google.Protobuf.WellKnownTypes;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -30,9 +31,16 @@ public class UserController : ControllerBase
         if (user == null || !BCrypt.Net.BCrypt.Verify(credentials.Password, user.Password))
             return Forbid();
 
-        _dbContext.Attach(new Domain.Models.User() { Id = user.Id, LastLogin = DateTime.UtcNow }).Property(e => e.LastLogin).IsModified = true;
+        var lastLogin = DateTime.UtcNow;
+
+        _dbContext.Attach(new Domain.Models.User { Id = user.Id, LastLogin = lastLogin }).Property(e => e.LastLogin).IsModified = true;
         await _dbContext.SaveChangesAsync();
 
-        return Ok(new { token = _protector.Protect(new UserData { UserId = ByteString.CopyFrom(user.Id.ToByteArray()), Username = credentials.Username }.ToByteArray()) });
+        var token = _protector.Protect(new UserData
+        {
+            UserId = user.Id, Username = credentials.Username, LoginDate = Timestamp.FromDateTime(lastLogin)
+        }.ToByteArray());
+
+        return Ok(new { token });
     }
 }

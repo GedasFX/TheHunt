@@ -7,21 +7,22 @@ namespace TheHunt.Domain.Models;
 public class User
 {
     [Key, Column("id")]
-    public Guid Id { get; set; }
+    public long Id { get; set; }
 
     [MaxLength(60)]
     [Column("username")]
     public string Username { get; set; } = null!;
-    
+
     [MaxLength(60)]
     [Column("password")]
     public string Password { get; set; } = null!;
-    
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
-    
+
     [Column("last_login")]
     public DateTime LastLogin { get; set; }
-    
-    public ICollection<Competition>? Competitions { get; set; }
+
+
+    public ICollection<CompetitionUser>? Competitions { get; set; }
 }

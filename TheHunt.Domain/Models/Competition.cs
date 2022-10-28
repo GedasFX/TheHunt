@@ -7,7 +7,7 @@ namespace TheHunt.Domain.Models;
 public class Competition
 {
     [Key, Column("id")]
-    public Guid Id { get; set; }
+    public long Id { get; set; }
 
     [MaxLength(200)]
     [Column("name")]
@@ -17,12 +17,18 @@ public class Competition
     [Column("description")]
     public string Description { get; set; } = null!;
 
-    [Column("admin_id")]
-    public ulong AdminId { get; set; }
+    [Column("is_listed")]
+    public bool IsListed { get; set; }
 
-    [ForeignKey(nameof(AdminId))]
-    public User? Admin { get; set; }
+    [Column("start_date")]
+    public DateTime StartDate { get; set; }
 
-    public ICollection<User>? Verifiers { get; set; }
-    public ICollection<User>? Members { get; set; }
+    [Column("end_date")]
+    public DateTime EndDate { get; set; }
+
+    [Column("created_at")]
+    public DateTime CreatedAt { get; set; }
+
+
+    public ICollection<CompetitionUser>? Members { get; set; }
 }

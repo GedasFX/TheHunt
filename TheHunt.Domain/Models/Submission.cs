@@ -8,7 +8,7 @@ namespace TheHunt.Domain.Models;
 public class Submission
 {
     [Key, Column("id")]
-    public ulong Id { get; set; }
+    public long Id { get; set; }
 
     [MaxLength(400)]
     [Column("proof_url")]
@@ -21,14 +21,15 @@ public class Submission
     [Column("submission_date")]
     [DefaultValue("current_timestamp at time zone 'utc'")]
     public DateTime SubmissionDate { get; set; }
-    
+
     [Column("verification_date")]
     public DateTime? VerificationDate { get; set; }
-    
+
+
     [Column("submitter_id")]
     [ForeignKey(nameof(Submitter))]
     public ulong SubmitterId { get; set; }
-    
+
     [Column("verifier_id")]
     [ForeignKey(nameof(Verifier))]
     public ulong? VerifierId { get; set; }

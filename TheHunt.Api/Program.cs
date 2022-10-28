@@ -1,3 +1,4 @@
+using HashidsNet;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers;
@@ -15,12 +16,16 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddMediatR(typeof(GetCurrentBountyQueryHandler).Assembly);
-builder.Services.AddDbContext<AppDbContext>(o => o.UseNpgsql("Server=127.0.0.1;Port=5432;Database=TheHunt;User Id=postgres;Password=example;"));
+builder.Services.AddDbContext<AppDbContext>(o => o
+    .UseNpgsql("Server=127.0.0.1;Port=5432;Database=TheHunt;User Id=postgres;Password=example;")
+    .EnableSensitiveDataLogging());
 builder.Services.AddScoped<IRequestContextAccessor, RequestContextAccessor>();
+builder.Services.AddSingleton<IHashids>(_ => new Hashids("D98D7101-C409-4D21-8B59-1A6362DF57C9", 11));
 
 builder.Services.AddDataProtection();
 builder.Services.AddControllers();
-builder.Services.AddGrpc().AddJsonTranscoding();
+
+builder.Services.AddGrpc(e => { e.Interceptors.Add<ExceptionHandlerInterceptor>(); }).AddJsonTranscoding();
 builder.Services.AddGrpcSwagger();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -34,7 +39,7 @@ builder.Services.AddSwaggerGen(c =>
     c.AddSecurityRequirement(new OpenApiSecurityRequirement()
     {
         {
-            new OpenApiSecurityScheme() { Reference = new OpenApiReference() { Id = "Token", Type = ReferenceType.SecurityScheme } },
+            new OpenApiSecurityScheme { Reference = new OpenApiReference { Id = "Token", Type = ReferenceType.SecurityScheme } },
             Array.Empty<string>()
         },
     });

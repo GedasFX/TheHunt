@@ -1,23 +1,69 @@
 ﻿syntax = "proto3";
 
+import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
 
 package TheHunt;
 
 service Competition {
-  rpc CreateCompetition (CreateCompetitionCommand) returns (CreateCompetitionResponse);
+  rpc ListCompetitions (ListCompetitionsQuery) returns (ListCompetitionsResponse) {
+    option (google.api.http) = {
+      get: "/competitions",
+    };
+  };
+
+  rpc GetCompetition (GetCompetitionQuery) returns (GetCompetitionResponse) {
+    option (google.api.http) = {
+      get: "/competitions/{id}",
+    };
+  };
+
+  rpc CreateCompetition (CreateCompetitionCommand) returns (CreateCompetitionResponse) {
+    option (google.api.http) = {
+      post: "/competitions",
+      body: "*",
+    };
+  };
+}
+
+message CompetitionDto {
+  string id = 1;
+
+  string name = 2;
+  optional string description = 3;
+
+  google.protobuf.Timestamp start_date = 5;
+  google.protobuf.Timestamp end_date = 6;
+}
+
+message ListCompetitionsQuery {
+  PageInfo page = 1;
+}
+message ListCompetitionsResponse {
+  repeated CompetitionDto items = 1;
+}
+
+message GetCompetitionQuery {
+  string id = 1;
+}
+message GetCompetitionResponse {
+  CompetitionDto item = 1;
 }
 
 message CreateCompetitionCommand {
   string name = 1;
   optional string description = 2;
-  
+
   bool public = 3;
-  
+
   google.protobuf.Timestamp start_date = 5;
   google.protobuf.Timestamp end_date = 6;
 }
-
 message CreateCompetitionResponse {
   string id = 1;
+}
+
+message PageInfo {
+  int32 index = 1;
+  int32 size = 2;
 }
