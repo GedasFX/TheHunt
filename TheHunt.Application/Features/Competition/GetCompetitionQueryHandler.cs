@@ -33,7 +33,7 @@ public class GetCompetitionQueryHandler :
 
     public async Task<GetCompetitionResponse> Handle(GetCompetitionQuery request, CancellationToken cancellationToken)
     {
-        var id = IdUtils.ToInternalId(request.Id);
+        var id = request.Id.ToInternalId();
         var competition = await MapToDto(_dbContext.Competitions
                 .Where(c => c.Id == id))
             .FirstOrDefaultAsync(cancellationToken: cancellationToken);
@@ -46,9 +46,8 @@ public class GetCompetitionQueryHandler :
     private static IQueryable<CompetitionDto> MapToDto(IQueryable<Domain.Models.Competition> competitions) =>
         competitions.Select(c => new CompetitionDto
         {
-            Id = IdUtils.ToUserId(c.Id),
-            Name = c.Name,
-            Description = c.Description,
+            Id = c.Id.ToUserId(),
+            Name = c.Name, Description = c.Description,
             StartDate = Timestamp.FromDateTime(c.StartDate),
             EndDate = Timestamp.FromDateTime(c.EndDate),
         }).AsNoTracking();

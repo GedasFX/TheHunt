@@ -11,28 +11,30 @@ service Competition {
       get: "/competitions",
     };
   };
-
   rpc GetCompetition (GetCompetitionQuery) returns (GetCompetitionResponse) {
     option (google.api.http) = {
       get: "/competitions/{id}",
     };
   };
-
   rpc CreateCompetition (CreateCompetitionCommand) returns (CreateCompetitionResponse) {
     option (google.api.http) = {
       post: "/competitions",
       body: "*",
     };
   };
-
   rpc UpdateCompetition (UpdateCompetitionCommand) returns (UpdateCompetitionResponse) {
     option (google.api.http) = {
       put: "/competitions/{id}",
       body: "*",
     };
   };
-
   rpc DeleteCompetition (DeleteCompetitionCommand) returns (DeleteCompetitionResponse) {
+    option (google.api.http) = {
+      delete: "/competitions/{id}",
+    };
+  };
+
+  rpc RegisterUserToCompetition (DeleteCompetitionCommand) returns (DeleteCompetitionResponse) {
     option (google.api.http) = {
       delete: "/competitions/{id}",
     };
