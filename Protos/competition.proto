@@ -24,6 +24,19 @@ service Competition {
       body: "*",
     };
   };
+
+  rpc UpdateCompetition (UpdateCompetitionCommand) returns (UpdateCompetitionResponse) {
+    option (google.api.http) = {
+      put: "/competitions/{id}",
+      body: "*",
+    };
+  };
+
+  rpc DeleteCompetition (DeleteCompetitionCommand) returns (DeleteCompetitionResponse) {
+    option (google.api.http) = {
+      delete: "/competitions/{id}",
+    };
+  };
 }
 
 message CompetitionDto {
@@ -50,17 +63,34 @@ message GetCompetitionResponse {
   CompetitionDto item = 1;
 }
 
-message CreateCompetitionCommand {
+message CompetitionRequest {
   string name = 1;
   optional string description = 2;
 
-  bool public = 3;
+  bool is_listed = 3;
 
   google.protobuf.Timestamp start_date = 5;
   google.protobuf.Timestamp end_date = 6;
 }
+
+message CreateCompetitionCommand {
+  CompetitionRequest item = 1;
+}
 message CreateCompetitionResponse {
   string id = 1;
+}
+
+message UpdateCompetitionCommand {
+  string id = 1;
+  CompetitionRequest item = 2;
+}
+message UpdateCompetitionResponse {
+}
+
+message DeleteCompetitionCommand {
+  string id = 1;
+}
+message DeleteCompetitionResponse {
 }
 
 message PageInfo {

@@ -29,6 +29,9 @@ public class Competition
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
 
+    [Column("updated_at")]
+    public DateTime UpdatedAt { get; set; }
+
 
     public ICollection<CompetitionUser>? Members { get; set; }
 }
