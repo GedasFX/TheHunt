@@ -16,12 +16,12 @@ service Competition {
       get: "/competitions/{id}",
     };
   };
-  rpc CreateCompetition (CreateCompetitionCommand) returns (CreateCompetitionResponse) {
-    option (google.api.http) = {
-      post: "/competitions",
-      body: "*",
-    };
-  };
+//  rpc CreateCompetition (CreateCompetitionCommand) returns (CreateCompetitionResponse) {
+//    option (google.api.http) = {
+//      post: "/competitions",
+//      body: "*",
+//    };
+//  };
   rpc UpdateCompetition (UpdateCompetitionCommand) returns (UpdateCompetitionResponse) {
     option (google.api.http) = {
       put: "/competitions/{id}",
@@ -75,9 +75,9 @@ message CompetitionRequest {
   google.protobuf.Timestamp end_date = 6;
 }
 
-message CreateCompetitionCommand {
-  CompetitionRequest item = 1;
-}
+//message CreateCompetitionCommand {
+//  CompetitionRequest item = 1;
+//}
 message CreateCompetitionResponse {
   string id = 1;
 }

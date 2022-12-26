@@ -25,6 +25,6 @@ public class CompetitionUser
     [ForeignKey(nameof(CompetitionId))]
     public Competition? Competition { get; set; }
 
-    [ForeignKey(nameof(UserId))]
-    public User? User { get; set; }
+    // [ForeignKey(nameof(UserId))]
+    // public User? User { get; set; }
 }

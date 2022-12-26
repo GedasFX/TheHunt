@@ -15,7 +15,7 @@ public class Competition
 
     [MaxLength(2000)]
     [Column("description")]
-    public string Description { get; set; } = null!;
+    public string? Description { get; set; }
 
     [Column("is_listed")]
     public bool IsListed { get; set; }

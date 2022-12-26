@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using TheHunt.Application.Helpers;
@@ -10,10 +11,18 @@ using TheHunt.Domain.Models;
 
 namespace TheHunt.Application.Features.Competition;
 
+public record CreateCompetitionCommand : IRequest<CreateCompetitionResponse>
+{
+    public string Name { get; init; } = null!;
+    public string? Description { get; init; }
+    public DateTime StartDate { get; init; }
+    public DateTime EndDate { get; init; }
+}
+
 public class ModifyCompetitionCommandHandler :
-    IRequestHandler<CreateCompetitionCommand, CreateCompetitionResponse>,
-    IRequestHandler<UpdateCompetitionCommand, UpdateCompetitionResponse>,
-    IRequestHandler<DeleteCompetitionCommand, DeleteCompetitionResponse>
+    IRequestHandler<CreateCompetitionCommand, CreateCompetitionResponse>//,
+    // IRequestHandler<UpdateCompetitionCommand, UpdateCompetitionResponse>,
+    // IRequestHandler<DeleteCompetitionCommand, DeleteCompetitionResponse>
 {
     private readonly AppDbContext _dbContext;
     private readonly IRequestContextAccessor _requestContextAccessor;
@@ -26,14 +35,10 @@ public class ModifyCompetitionCommandHandler :
 
     public async Task<CreateCompetitionResponse> Handle(CreateCompetitionCommand request, CancellationToken cancellationToken)
     {
-        if (request.Item.EndDate <= request.Item.StartDate)
-            throw new EntityValidationException("End date cannot be be before or equal to start date.");
-
         var entity = new Domain.Models.Competition
         {
-            Name = request.Item.Name, Description = request.Item.Description,
-            StartDate = request.Item.StartDate.ToDateTime(), EndDate = request.Item.EndDate.ToDateTime(),
-            IsListed = request.Item.IsListed,
+            Name = request.Name, Description = request.Description,
+            StartDate = request.StartDate, EndDate = request.EndDate,
             CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
             Members = new CompetitionUser[]
             {
@@ -101,5 +106,16 @@ public class ModifyCompetitionCommandHandler :
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return new DeleteCompetitionResponse();
+    }
+}
+
+public class CreateCompetitionCommandValidator : AbstractValidator<CreateCompetitionCommand>
+{
+    public CreateCompetitionCommandValidator()
+    {
+        RuleFor(r => r.Name).NotEmpty();
+
+        RuleFor(r => r.StartDate).NotEmpty();
+        RuleFor(r => r.EndDate).NotEmpty().GreaterThan(e => e.StartDate);
     }
 }

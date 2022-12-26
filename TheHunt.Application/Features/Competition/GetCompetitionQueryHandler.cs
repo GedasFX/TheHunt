@@ -9,9 +9,9 @@ using TheHunt.Domain;
 
 namespace TheHunt.Application.Features.Competition;
 
-public class GetCompetitionQueryHandler :
-    IRequestHandler<ListCompetitionsQuery, ListCompetitionsResponse>,
-    IRequestHandler<GetCompetitionQuery, GetCompetitionResponse>
+public class GetCompetitionQueryHandler// :
+    // IRequestHandler<ListCompetitionsQuery, ListCompetitionsResponse>,
+    // IRequestHandler<GetCompetitionQuery, GetCompetitionResponse>
 {
     private readonly AppDbContext _dbContext;
 
