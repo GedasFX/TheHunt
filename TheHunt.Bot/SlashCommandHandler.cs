@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using Discord;
 using Discord.WebSocket;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,16 +10,9 @@ namespace TheHunt.Bot;
 
 public class SlashCommandHandler
 {
-    private readonly IServiceProvider _serviceProvider;
-
-    private SlashCommandHandler(IServiceProvider serviceProvider)
+    public static void Register(DiscordSocketClient client, IServiceProvider serviceProvider)
     {
-        _serviceProvider = serviceProvider;
-    }
-
-    public static SlashCommandHandler Register(DiscordSocketClient client, IServiceProvider serviceProvider)
-    {
-        var handler = new SlashCommandHandler(serviceProvider);
+        var handler = new SlashCommandHandler();
         client.SlashCommandExecuted += async command =>
         {
             await using var scope = serviceProvider.CreateAsyncScope();
@@ -28,19 +22,42 @@ public class SlashCommandHandler
                 UserId = (long)command.User.Id,
             };
 
-            await OnSlashCommandExecuted(scope.ServiceProvider.GetRequiredService<IMediator>(), command);
+            try
+            {
+                // await command.DeferAsync();
+                await OnSlashCommandExecuted(scope.ServiceProvider.GetRequiredService<IMediator>(), command);
+            }
+            catch (Exception e)
+            {
+                await command.FollowupAsync(e.Message);
+                throw;
+            }
         };
-
-        return handler;
     }
 
     private static Task OnSlashCommandExecuted(IMediator mediator, SocketSlashCommand command)
     {
-        return command.CommandName switch
+        switch (command.CommandName)
         {
-            "create" => HandleCreate(mediator, command),
-            _ => throw new ArgumentOutOfRangeException(nameof(command), $"Command {command.CommandName} does not have a handler.")
-        };
+            case "competitions":
+            {
+                switch (command.Data.Options.FirstOrDefault()?.Name)
+                {
+                    case "help": return HandleCompetitionsHelp(command);
+                    default:
+                        throw new InvalidOperationException(
+                            $"Command '{command.CommandName} {command.Data.Options.FirstOrDefault()?.Name}' does not have a handler.");
+                }
+            }
+            case "create": return HandleCreate(mediator, command);
+            default: throw new InvalidOperationException($"Command '{command.CommandName}' does not have a handler.");
+        }
+    }
+
+    private static async Task HandleCompetitionsHelp(IDiscordInteraction command)
+    {
+        // _ = command.DeferAsync();
+        await command.RespondWithModalAsync(new ModalBuilder().WithTitle("Yoo").WithCustomId("1515").Build());
     }
 
     private static async Task HandleCreate(ISender mediator, SocketSlashCommand command)
@@ -50,14 +67,14 @@ public class SlashCommandHandler
             Name = (command.Data.Options.FirstOrDefault(o => o.Name == "name")?.Value as string)!,
             Description = command.Data.Options.FirstOrDefault(o => o.Name == "description")?.Value as string,
 
-            StartDate = command.Data.Options.FirstOrDefault(o => o.Name == "start_date")?.Value is not string sdv
-                ? DateTime.UtcNow
-                : DateTime.Parse(sdv, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal),
-            EndDate = command.Data.Options.FirstOrDefault(o => o.Name == "end_date")?.Value is not string edv
-                ? default
-                : DateTime.Parse(edv, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal)
+            StartDate = command.Data.Options.FirstOrDefault(o => o.Name == "start_date")?.Value is string sdv
+                ? DateTime.Parse(sdv, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal)
+                : DateTime.UtcNow,
+            EndDate = command.Data.Options.FirstOrDefault(o => o.Name == "end_date")?.Value is string edv
+                ? DateTime.Parse(edv, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal)
+                : default
         });
 
-        await command.RespondAsync($"Competition successfully created. Id: {resp.Id}.");
+        await command.FollowupAsync($"Competition successfully created. Id: {resp.Id}.");
     }
 }

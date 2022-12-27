@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TheHunt.Domain;
@@ -11,9 +12,10 @@ using TheHunt.Domain;
 namespace TheHunt.Domain.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20221226203059_nofk2")]
+    partial class nofk2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -91,6 +93,8 @@ namespace TheHunt.Domain.Migrations
 
                     b.HasKey("CompetitionId", "UserId");
 
+                    b.HasIndex("UserId");
+
                     b.ToTable("competition_members");
                 });
 
@@ -136,12 +140,23 @@ namespace TheHunt.Domain.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("TheHunt.Domain.Models.User", null)
+                        .WithMany("Competitions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Competition");
                 });
 
             modelBuilder.Entity("TheHunt.Domain.Models.Competition", b =>
                 {
                     b.Navigation("Members");
+                });
+
+            modelBuilder.Entity("TheHunt.Domain.Models.User", b =>
+                {
+                    b.Navigation("Competitions");
                 });
 #pragma warning restore 612, 618
         }

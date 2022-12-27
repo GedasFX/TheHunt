@@ -24,5 +24,5 @@ public class User
     public DateTime LastLogin { get; set; }
 
 
-    public ICollection<CompetitionUser>? Competitions { get; set; }
+    // public ICollection<CompetitionUser>? Competitions { get; set; }
 }
