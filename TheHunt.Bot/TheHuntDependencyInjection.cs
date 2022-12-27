@@ -15,21 +15,19 @@ public static class TheHuntDependencyInjection
 
     private class DiscordSocketClientWrapper : DiscordSocketClient
     {
-        private readonly IServiceProvider _serviceProvider;
         private readonly string _botToken;
 
         public DiscordSocketClientWrapper(IServiceProvider serviceProvider, string botToken) : base(new DiscordSocketConfig()
         {
-            GatewayIntents = GatewayIntents.None
+            GatewayIntents = GatewayIntents.None | GatewayIntents.AllUnprivileged
         })
         {
-            _serviceProvider = serviceProvider;
             _botToken = botToken;
 
             var logger = serviceProvider.GetRequiredService<ILogger<DiscordSocketClient>>();
             Log += message =>
             {
-                logger.Log((LogLevel)Math.Abs((int)message.Severity - 5), 0, message,
+                logger.Log((LogLevel)(5 - message.Severity), 0, message,
                     message.Exception, delegate { return message.ToString(); });
                 return Task.CompletedTask;
             };
@@ -39,8 +37,6 @@ public static class TheHuntDependencyInjection
         {
             await LoginAsync(TokenType.Bot, _botToken);
             await base.StartAsync();
-
-            SlashCommandHandler.Register(this, _serviceProvider);
         }
     }
 }

@@ -1,11 +1,14 @@
 ﻿namespace TheHunt.Application.Helpers;
 
+public record UserContext(ulong UserId);
+
 public interface IRequestContextAccessor
 {
-    public UserData Context { get; set; }
+    public UserContext Context { get; set; }
 }
 
 public class RequestContextAccessor : IRequestContextAccessor
 {
-    public UserData Context { get; set; } = new();
+    private static UserContext DefaultContext { get; } = new(0);
+    public UserContext Context { get; set; } = DefaultContext;
 }

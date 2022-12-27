@@ -6,8 +6,8 @@ namespace TheHunt.Domain.Models;
 [Table("competitions")]
 public class Competition
 {
-    [Key, Column("id")]
-    public long Id { get; set; }
+    [Key, Column("channel_id")]
+    public ulong ChannelId { get; set; }
 
     [MaxLength(200)]
     [Column("name")]
@@ -17,14 +17,11 @@ public class Competition
     [Column("description")]
     public string? Description { get; set; }
 
-    [Column("is_listed")]
-    public bool IsListed { get; set; }
-
     [Column("start_date")]
     public DateTime StartDate { get; set; }
 
     [Column("end_date")]
-    public DateTime EndDate { get; set; }
+    public DateTime? EndDate { get; set; }
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }

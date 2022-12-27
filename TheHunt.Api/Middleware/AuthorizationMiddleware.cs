@@ -32,7 +32,7 @@ public class AuthorizationMiddleware
             await _next(context); return;
         }
 
-        requestContextAccessor.Context = user;
+        requestContextAccessor.Context = new UserContext((ulong)user.UserId);
 
         await _next(context);
     }

@@ -15,6 +15,7 @@
 
     <ItemGroup>
       <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+      <PackageReference Include="Discord.Net" Version="3.9.0" />
       <PackageReference Include="FluentValidation" Version="11.4.0" />
       <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.4.0" />
       <PackageReference Include="GedasFX.SourceGenerators.gRPC.MediatR" Version="1.2.1" PrivateAssets="All" />

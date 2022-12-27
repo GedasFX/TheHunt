@@ -7,10 +7,10 @@ namespace TheHunt.Domain.Models;
 public class CompetitionUser
 {
     [Key, Column("competition_id")]
-    public long CompetitionId { get; set; }
+    public ulong CompetitionId { get; set; }
 
     [Key, Column("user_id")]
-    public long UserId { get; set; }
+    public ulong UserId { get; set; }
 
     [Column("is_admin")]
     public bool IsAdmin { get; set; }

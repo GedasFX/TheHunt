@@ -26,8 +26,7 @@ builder.Services.AddControllers();
 
 builder.Services.AddGraphQLServer()
     .AddProjections()
-    .RegisterDbContext<AppDbContext>()
-    .AddQueryType<Query>();
+    .RegisterDbContext<AppDbContext>();
 
 builder.Services.AddGrpc(e => { e.Interceptors.Add<ExceptionHandlerInterceptor>(); }).AddJsonTranscoding();
 builder.Services.AddAppSwagger();

@@ -24,12 +24,10 @@ namespace TheHunt.Domain.Migrations
 
             modelBuilder.Entity("TheHunt.Domain.Models.Competition", b =>
                 {
-                    b.Property<long>("Id")
+                    b.Property<decimal>("ChannelId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+                        .HasColumnType("numeric(20,0)")
+                        .HasColumnName("channel_id");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -40,13 +38,9 @@ namespace TheHunt.Domain.Migrations
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("description");
 
-                    b.Property<DateTime>("EndDate")
+                    b.Property<DateTime?>("EndDate")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("end_date");
-
-                    b.Property<bool>("IsListed")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_listed");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -62,19 +56,19 @@ namespace TheHunt.Domain.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
-                    b.HasKey("Id");
+                    b.HasKey("ChannelId");
 
                     b.ToTable("competitions");
                 });
 
             modelBuilder.Entity("TheHunt.Domain.Models.CompetitionUser", b =>
                 {
-                    b.Property<long>("CompetitionId")
-                        .HasColumnType("bigint")
+                    b.Property<decimal>("CompetitionId")
+                        .HasColumnType("numeric(20,0)")
                         .HasColumnName("competition_id");
 
-                    b.Property<long>("UserId")
-                        .HasColumnType("bigint")
+                    b.Property<decimal>("UserId")
+                        .HasColumnType("numeric(20,0)")
                         .HasColumnName("user_id");
 
                     b.Property<bool>("IsAdmin")

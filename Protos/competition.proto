@@ -11,11 +11,11 @@ service Competition {
       get: "/competitions",
     };
   };
-  rpc GetCompetition (GetCompetitionQuery) returns (GetCompetitionResponse) {
-    option (google.api.http) = {
-      get: "/competitions/{id}",
-    };
-  };
+//  rpc GetCompetition (GetCompetitionQuery) returns (GetCompetitionResponse) {
+//    option (google.api.http) = {
+//      get: "/competitions/{id}",
+//    };
+//  };
 //  rpc CreateCompetition (CreateCompetitionCommand) returns (CreateCompetitionResponse) {
 //    option (google.api.http) = {
 //      post: "/competitions",
@@ -58,9 +58,9 @@ message ListCompetitionsResponse {
   repeated CompetitionDto items = 1;
 }
 
-message GetCompetitionQuery {
-  string id = 1;
-}
+//message GetCompetitionQuery {
+//  string id = 1;
+//}
 message GetCompetitionResponse {
   CompetitionDto item = 1;
 }
