@@ -12,9 +12,6 @@ public class CompetitionUser
     [Key, Column("user_id")]
     public ulong UserId { get; set; }
 
-    [Column("is_admin")]
-    public bool IsAdmin { get; set; }
-
     [Column("is_moderator")]
     public bool IsModerator { get; set; }
 

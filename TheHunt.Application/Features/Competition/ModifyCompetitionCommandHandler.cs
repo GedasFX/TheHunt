@@ -54,7 +54,7 @@ public class ModifyCompetitionCommandHandler :
             CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
             Members = new CompetitionUser[]
             {
-                new() { UserId = _requestContextAccessor.Context.UserId, IsAdmin = true, IsModerator = true, RegistrationDate = DateTime.UtcNow }
+                new() { UserId = _requestContextAccessor.Context.UserId, IsModerator = true, RegistrationDate = DateTime.UtcNow }
             },
         };
 
