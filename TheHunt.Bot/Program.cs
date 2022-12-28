@@ -1,5 +1,7 @@
 ﻿using Discord;
 using Discord.WebSocket;
+using Google.Apis.Services;
+using Google.Apis.Sheets.v4;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,7 +24,7 @@ serviceCollection.AddApplication(configuration)
 serviceCollection.AddHttpClient<CdnHttpClient>();
 
 var serviceProvider = serviceCollection.BuildServiceProvider();
-
+await new MySheet().Playground();
 var discord = serviceProvider.GetRequiredService<DiscordSocketClient>();
 await discord.StartAsync();
 
@@ -37,6 +39,7 @@ using (var scope = serviceProvider.CreateScope())
         channelCache.Add(competition.ChannelId, true);
     }
 }
+
 
 
 discord.MessageReceived += async message =>
