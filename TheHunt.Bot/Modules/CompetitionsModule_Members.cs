@@ -2,7 +2,6 @@
 using Discord.Interactions;
 using Microsoft.EntityFrameworkCore;
 using TheHunt.Application;
-using TheHunt.Application.Helpers;
 using TheHunt.Domain;
 using TheHunt.Domain.Models;
 
@@ -68,7 +67,7 @@ public partial class CompetitionsModule
         {
             await DeferAsync(ephemeral: true);
 
-            var dbUser = await _dbContext.CompetitionUsers.SingleOrDefaultAsync(c => c.UserId == Context.User.Id && c.CompetitionId == Context.Channel.Id);
+            var dbUser = await _dbContext.CompetitionUsers.SingleOrDefaultAsync(c => c.UserId == user.Id && c.CompetitionId == Context.Channel.Id);
             if (dbUser == null)
                 throw new EntityValidationException($"<@{user.Id}> is not part of the competition.");
 

@@ -1,9 +1,6 @@
 ﻿using Discord;
 using Discord.Interactions;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
-using TheHunt.Application.Features.Competition;
-using TheHunt.Application.Helpers;
 using TheHunt.Domain;
 
 namespace TheHunt.Bot.Modules;
@@ -14,18 +11,10 @@ public partial class CompetitionsModule
     public class CompetitionsShowModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly AppDbContext _dbContext;
-        private readonly IRequestContextAccessor _contextAccessor;
 
-        public CompetitionsShowModule(AppDbContext dbContext, IRequestContextAccessor contextAccessor)
+        public CompetitionsShowModule(AppDbContext dbContext)
         {
             _dbContext = dbContext;
-            _contextAccessor = contextAccessor;
-        }
-
-        public override void BeforeExecute(ICommandInfo command)
-        {
-            _contextAccessor.Context = new UserContext(Context.User.Id);
-            base.BeforeExecute(command);
         }
 
         [SlashCommand("overview", "Provides a high level overview of competition.")]
@@ -49,6 +38,12 @@ public partial class CompetitionsModule
                 return;
             }
 
+            string GetVerifiers()
+            {
+                var verifiers = string.Join(", ", competition.Verifiers.Select(s => $"<@{s.UserId}>"));
+                return !string.IsNullOrEmpty(verifiers) ? verifiers : "N/A";
+            }
+
             await RespondAsync(
                 embed: new EmbedBuilder()
                     .WithTitle(competition.Name)
@@ -58,7 +53,7 @@ public partial class CompetitionsModule
                     .AddField("End Date", competition.EndDate != null ? $"<t:{(int)(competition.EndDate.Value - DateTime.UnixEpoch).TotalSeconds}:F>" : "N/A")
                     .AddField("Total Members", competition.TotalMembers, inline: true)
                     .AddField("Total Submissions", competition.TotalSubmissions, inline: true)
-                    .AddField("Verifiers", string.Join(Environment.NewLine, competition.Verifiers.Select(s => $"<@{s.UserId}>")))
+                    .AddField("Verifiers", GetVerifiers())
                     .WithColor(0xA44200)
                     .Build(),
                 ephemeral: true);
@@ -85,12 +80,19 @@ public partial class CompetitionsModule
                 return;
             }
 
+            string GetMembers()
+            {
+                var members = string.Join(Environment.NewLine,
+                    competition.Members.Select((m, i) => $"`{i + page * 25 + 1:000}` {(m.IsModerator ? "🕵️ " : "")}<@{m.UserId}>"));
+                return !string.IsNullOrEmpty(members) ? members : "N/A";
+            }
+
             await RespondAsync(
                 embed: new EmbedBuilder()
                     .WithTitle(competition.Name)
-                    .AddField("Total Members", competition.TotalMembers)
-                    .AddField("Members",
-                        string.Join(Environment.NewLine, competition.Members.Select(m => $"{(m.IsModerator ? "🕵️ " : "")}<@{m.UserId}>")))
+                    .AddField("Total Members", competition.TotalMembers, inline: true)
+                    .AddField("Page Index", page, inline: true)
+                    .AddField("Members", GetMembers())
                     .WithColor(0xA44200)
                     .Build(),
                 ephemeral: true);

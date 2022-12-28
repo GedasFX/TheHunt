@@ -20,6 +20,7 @@
       <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.4.0" />
       <PackageReference Include="GedasFX.SourceGenerators.gRPC.MediatR" Version="1.2.1" PrivateAssets="All" />
       <PackageReference Include="Google.Api.CommonProtos" Version="2.6.0" />
+      <PackageReference Include="Google.Apis.Sheets.v4" Version="1.58.0.2826" />
       <PackageReference Include="Google.Protobuf" Version="3.21.8" />
       <PackageReference Include="Grpc.Net.Common" Version="2.49.0" />
       <PackageReference Include="Grpc.Tools" Version="2.50.0">
