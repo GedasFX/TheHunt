@@ -1,10 +1,8 @@
 ﻿using Discord;
 using Discord.Interactions;
-using Microsoft.EntityFrameworkCore;
 using TheHunt.Application;
 using TheHunt.Bot.Internal;
-using TheHunt.Domain;
-using TheHunt.Domain.Models;
+using TheHunt.Bot.Services;
 
 namespace TheHunt.Bot.Modules;
 
@@ -13,13 +11,15 @@ public partial class CompetitionsModule
     [Group("members", "Provides tools for managing competition members.")]
     public class CompetitionsMembersModule : InteractionModuleBase<SocketInteractionContext>
     {
-        private readonly AppDbContext _dbContext;
-        private readonly MySheet _sheet;
+        private readonly SpreadsheetService _sheet;
+        private readonly SpreadsheetQueryService _queryService;
+        private readonly CompetitionsQueryService _competitionsQueryService;
 
-        public CompetitionsMembersModule(AppDbContext dbContext, MySheet sheet)
+        public CompetitionsMembersModule(SpreadsheetService sheet, SpreadsheetQueryService queryService, CompetitionsQueryService competitionsQueryService)
         {
-            _dbContext = dbContext;
             _sheet = sheet;
+            _queryService = queryService;
+            _competitionsQueryService = competitionsQueryService;
         }
 
         [RequireUserPermission(ChannelPermission.ManageChannels)]
@@ -32,15 +32,11 @@ public partial class CompetitionsModule
         {
             await DeferAsync(ephemeral: true);
 
-            // if (await _dbContext.CompetitionUsers.AsNoTracking()
-            //         .AnyAsync(c => c.UserId == user.Id && c.CompetitionId == Context.Channel.Id))
-            //     throw new EntityValidationException($"<@{user.Id}> is already part of the competition.");
-            //
-            // _dbContext.Add(new CompetitionUser { UserId = user.Id, CompetitionId = Context.Channel.Id, RegistrationDate = DateTime.UtcNow });
-            // await _dbContext.SaveChangesAsync();
+            if (await _queryService.GetCompetitionMember(Context.Channel.Id, user.Id) != null)
+                throw new EntityValidationException($"<@{user.Id}> is already part of the competition.");
 
-            await _sheet.AddMember(_dbContext.Competitions.AsNoTracking().Where(c => c.ChannelId == Context.Channel.Id).Select(c => c.Spreadsheet).First(),
-                user.Id, user.DisplayName, role, null);
+            await _sheet.AddMember((await _competitionsQueryService.GetSpreadsheetRef(Context.Channel.Id))!, user.Id, user.DisplayName, role, null);
+            _queryService.InvalidateCache(Context.Channel.Id, "members");
 
             await FollowupAsync($"<@{user.Id}> was successfully added to the competition.", ephemeral: true);
             await FollowupAsync($"<@{Context.User.Id}> added <@{user.Id}> to the competition.");
@@ -54,12 +50,12 @@ public partial class CompetitionsModule
         {
             await DeferAsync(ephemeral: true);
 
-            if (!await _dbContext.CompetitionUsers.AsNoTracking()
-                    .AnyAsync(c => c.UserId == user.Id && c.CompetitionId == Context.Channel.Id))
+            var competitor = await _queryService.GetCompetitionMember(Context.Channel.Id, user.Id);
+            if (competitor == null)
                 throw new EntityValidationException($"<@{user.Id}> is not part of the competition.");
 
-            _dbContext.Remove(new CompetitionUser { UserId = user.Id, CompetitionId = Context.Channel.Id });
-            await _dbContext.SaveChangesAsync();
+            await _sheet.RemoveMember((await _competitionsQueryService.GetSpreadsheetRef(Context.Channel.Id))!, competitor.RowIdx);
+            _queryService.InvalidateCache(Context.Channel.Id, "members");
 
             await FollowupAsync($"<@{user.Id}> was successfully removed from the competition.", ephemeral: true);
             await FollowupAsync($"<@{Context.User.Id}> removed <@{user.Id}> from the competition.");
@@ -75,15 +71,27 @@ public partial class CompetitionsModule
         {
             await DeferAsync(ephemeral: true);
 
-            var dbUser = await _dbContext.CompetitionUsers.SingleOrDefaultAsync(c => c.UserId == user.Id && c.CompetitionId == Context.Channel.Id);
-            if (dbUser == null)
+            var competitor = await _queryService.GetCompetitionMember(Context.Channel.Id, user.Id);
+            if (competitor == null)
                 throw new EntityValidationException($"<@{user.Id}> is not part of the competition.");
 
-            dbUser.IsModerator = role == 1;
-            await _dbContext.SaveChangesAsync();
+            await _sheet.RemoveMember((await _competitionsQueryService.GetSpreadsheetRef(Context.Channel.Id))!, competitor.RowIdx);
+            _queryService.InvalidateCache(Context.Channel.Id, "members");
 
-            await FollowupAsync($"<@{user.Id}> is now a {(dbUser.IsModerator ? "Verifier" : "Regular participant")}.", ephemeral: true);
-            await FollowupAsync($"<@{Context.User.Id}> made <@{user.Id}> a {(dbUser.IsModerator ? "Verifier" : "Regular participant")}.");
+            await FollowupAsync($"<@{user.Id}> was successfully removed from the competition.", ephemeral: true);
+            await FollowupAsync($"<@{Context.User.Id}> removed <@{user.Id}> from the competition.");
+            
+            // await DeferAsync(ephemeral: true);
+            //
+            // var dbUser = await _dbContext.CompetitionUsers.SingleOrDefaultAsync(c => c.UserId == user.Id && c.CompetitionId == Context.Channel.Id);
+            // if (dbUser == null)
+            //     throw new EntityValidationException($"<@{user.Id}> is not part of the competition.");
+            //
+            // dbUser.IsModerator = role == 1;
+            // await _dbContext.SaveChangesAsync();
+            //
+            // await FollowupAsync($"<@{user.Id}> is now a {(dbUser.IsModerator ? "Verifier" : "Regular participant")}.", ephemeral: true);
+            // await FollowupAsync($"<@{Context.User.Id}> made <@{user.Id}> a {(dbUser.IsModerator ? "Verifier" : "Regular participant")}.");
         }
     }
 }

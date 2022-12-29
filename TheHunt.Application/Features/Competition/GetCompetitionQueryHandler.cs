@@ -44,13 +44,4 @@ public class GetCompetitionQueryHandler :
 
         return competition;
     }
-
-    private static IQueryable<CompetitionDto> MapToDto(IQueryable<Domain.Models.Competition> competitions) =>
-        competitions.Select(c => new CompetitionDto
-        {
-            // Id = c.Id.ToUserId(),
-            Name = c.Name, Description = c.Description,
-            StartDate = Timestamp.FromDateTime(c.StartDate),
-            // EndDate = Timestamp.FromDateTime(c.EndDate),
-        }).AsNoTracking();
 }

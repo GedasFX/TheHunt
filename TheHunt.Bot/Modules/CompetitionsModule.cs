@@ -1,26 +1,22 @@
 ﻿using Discord;
 using Discord.Interactions;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using TheHunt.Application;
 using TheHunt.Application.Helpers;
 using TheHunt.Bot.Internal;
 using TheHunt.Domain;
-using TheHunt.Domain.Models;
 
 namespace TheHunt.Bot.Modules;
 
 [Group("competitions", "Tools to manage competitions.")]
 public partial class CompetitionsModule : InteractionModuleBase<SocketInteractionContext>
 {
-    private readonly IMediator _mediator;
     private readonly IRequestContextAccessor _contextAccessor;
     private readonly AppDbContext _dbContext;
-    private readonly MySheet _sheet;
+    private readonly SpreadsheetService _sheet;
 
-    public CompetitionsModule(IMediator mediator, IRequestContextAccessor contextAccessor, AppDbContext dbContext, MySheet sheet)
+    public CompetitionsModule(IRequestContextAccessor contextAccessor, AppDbContext dbContext, SpreadsheetService sheet)
     {
-        _mediator = mediator;
         _contextAccessor = contextAccessor;
         _dbContext = dbContext;
         _sheet = sheet;
@@ -62,11 +58,9 @@ public partial class CompetitionsModule : InteractionModuleBase<SocketInteractio
         var entity = new Domain.Models.Competition
         {
             ChannelId = Context.Channel.Id, SubmissionChannelId = submissionChannel?.Id ?? Context.Channel.Id,
-            Name = name ?? $"#{Context.Channel.Name}", Description = description,
             StartDate = startDate ?? DateTime.UtcNow, EndDate = endDate,
+            Spreadsheet = await _sheet.CreateCompetition($"#{Context.Channel.Name}", spreadsheetId)
         };
-
-        entity.Spreadsheet = await _sheet.CreateCompetition(entity.Name, spreadsheetId);
 
         _dbContext.Competitions.Add(entity);
         await _dbContext.SaveChangesAsync();

@@ -9,16 +9,13 @@ using TheHunt.Domain.Models;
 
 namespace TheHunt.Bot.Internal;
 
-public class MySheet
+public class SpreadsheetService
 {
     private readonly SheetsService _service;
 
     private static string[] Roles { get; } = { "Member", "🔍 Verifier" };
-    // private const string SheetId = "1yPwaaznSMMXRVW4LUEm8L6-69dqFEdoeX7StQP0br-M";
 
-    // private IDictionary<ulong, CompetitionMap> SheetsMap { get; } = new Dictionary<ulong, CompetitionMap>();
-
-    public MySheet(string googleCredentialsFile)
+    public SpreadsheetService(string googleCredentialsFile)
     {
         _service = new SheetsService(new BaseClientService.Initializer()
         {
@@ -26,15 +23,48 @@ public class MySheet
         });
     }
 
-    public async Task Playground()
+    public async Task<IReadOnlyList<CompetitionUser>> GetMembers(SpreadsheetReference sheet)
     {
+        try
+        {
+            var data = await _service.Spreadsheets.Values.BatchGetByDataFilter(new BatchGetValuesByDataFilterRequest()
+            {
+                DataFilters = new[]
+                {
+                    new DataFilter()
+                        { GridRange = new GridRange() { SheetId = sheet.MembersSheet, StartRowIndex = 1, StartColumnIndex = 0, EndColumnIndex = 1 } },
+                    new DataFilter()
+                        { GridRange = new GridRange() { SheetId = sheet.MembersSheet, StartRowIndex = 1, StartColumnIndex = 2, EndColumnIndex = 3 } },
+                }
+            }, sheet.SpreadsheetId).ExecuteAsync();
+
+            var idColumnIdx = data.ValueRanges.IndexOf(data.ValueRanges.First(v => v.DataFilters[0].GridRange.StartColumnIndex == 0));
+            var roleColumnIdx = idColumnIdx == 0 ? 1 : 0;
+            return (IReadOnlyList<CompetitionUser>?)data.ValueRanges[idColumnIdx].ValueRange.Values?
+                       .Select((t, i) => (List: t, Idx: i)).Where(t => t.List?.Count > 0).Select((t, i) => new CompetitionUser
+                       {
+                           UserId = ulong.Parse((string)t.List[0]), RowIdx = t.Idx,
+                           Role = (string)data.ValueRanges[roleColumnIdx].ValueRange.Values[i][0] == "🔍 Verifier" ? (byte)1 : (byte)0
+                       }).ToList()
+                   ?? Array.Empty<CompetitionUser>();
+        }
+        catch (Exception e)
+        {
+            throw new EntityValidationException("""
+Members sheet is malformed. This is generally caused by manual edits. To resolve issues, make sure:
+  1. 1st column [id], does not have any duplicate entries.
+  2. 3rd column [role], does not have any invalid values.
+  3. 1st (A) and 3rd (C) columns are [id] and [role].
+  4. There are no rows with missing [id].
+""", e);
+        }
     }
 
     public async Task AddMember(SpreadsheetReference sheet, ulong userId, string displayName, int role, string? team)
     {
         await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
         {
-            Requests = new[] 
+            Requests = new[]
             {
                 SheetUtils.AppendRow(sheet.MembersSheet, new[]
                 {
@@ -43,6 +73,27 @@ public class MySheet
                     SheetUtils.StringDropdownCell(Roles[role], Roles),
                     SheetUtils.StringCell(team),
                 })
+            }
+        }, sheet.SpreadsheetId).ExecuteAsync();
+    }
+
+    public async Task RemoveMember(SpreadsheetReference sheet, int rowNumber)
+    {
+        await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
+        {
+            Requests = new[]
+            {
+                new Request()
+                {
+                    DeleteDimension = new DeleteDimensionRequest()
+                    {
+                        Range = new DimensionRange()
+                        {
+                            Dimension = "ROWS", SheetId = sheet.MembersSheet,
+                            StartIndex = rowNumber + 1, EndIndex = rowNumber + 2,
+                        }
+                    }
+                }
             }
         }, sheet.SpreadsheetId).ExecuteAsync();
     }

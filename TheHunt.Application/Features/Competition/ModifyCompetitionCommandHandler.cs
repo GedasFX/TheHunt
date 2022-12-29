@@ -40,25 +40,25 @@ public class ModifyCompetitionCommandHandler :
 
     public async Task<Unit> Handle(CreateCompetitionCommand request, CancellationToken cancellationToken)
     {
-        if (await _dbContext.Competitions.AnyAsync(c => c.ChannelId == request.ChannelId, cancellationToken: cancellationToken))
-            throw new EntityValidationException("This channel already has a competition. Please use a different channel.");
-
-        if (_discord.GetChannel(request.ChannelId) is not SocketTextChannel)
-            throw new EntityValidationException("Given channel is not a text channel.");
-
-        var entity = new Domain.Models.Competition
-        {
-            ChannelId = request.ChannelId,
-            Name = request.Name, Description = request.Description,
-            StartDate = request.StartDate, EndDate = request.EndDate,
-            Members = new CompetitionUser[]
-            {
-                new() { UserId = _requestContextAccessor.Context.UserId, IsModerator = true, RegistrationDate = DateTime.UtcNow }
-            },
-        };
-
-        _dbContext.Competitions.Add(entity);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        // if (await _dbContext.Competitions.AnyAsync(c => c.ChannelId == request.ChannelId, cancellationToken: cancellationToken))
+        //     throw new EntityValidationException("This channel already has a competition. Please use a different channel.");
+        //
+        // if (_discord.GetChannel(request.ChannelId) is not SocketTextChannel)
+        //     throw new EntityValidationException("Given channel is not a text channel.");
+        //
+        // var entity = new Domain.Models.Competition
+        // {
+        //     ChannelId = request.ChannelId,
+        //     Name = request.Name, Description = request.Description,
+        //     StartDate = request.StartDate, EndDate = request.EndDate,
+        //     Members = new CompetitionUser[]
+        //     {
+        //         new() { UserId = _requestContextAccessor.Context.UserId, IsModerator = true, RegistrationDate = DateTime.UtcNow }
+        //     },
+        // };
+        //
+        // _dbContext.Competitions.Add(entity);
+        // await _dbContext.SaveChangesAsync(cancellationToken);
 
         return Unit.Value;
     }

@@ -6,9 +6,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using StackExchange.Redis;
 using TheHunt.Application;
 using TheHunt.Bot;
 using TheHunt.Bot.Internal;
+using TheHunt.Bot.Services;
 using TheHunt.Domain;
 
 var configuration = new ConfigurationBuilder()
@@ -20,7 +22,10 @@ var serviceCollection = new ServiceCollection()
 
 serviceCollection.AddApplication(configuration)
     .AddDiscord(configuration["Discord:Token"]!);
-serviceCollection.AddSingleton(_ => new MySheet("google.json"));
+serviceCollection.AddSingleton(_ => new SpreadsheetService("google.json"));
+serviceCollection.AddScoped<SpreadsheetQueryService>();
+serviceCollection.AddScoped<CompetitionsQueryService>();
+serviceCollection.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect("localhost"));
 
 serviceCollection.AddHttpClient<CdnHttpClient>();
 

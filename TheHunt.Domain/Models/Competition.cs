@@ -29,14 +29,6 @@ public class Competition
     [Column("submission_channel_id")]
     public ulong SubmissionChannelId { get; set; }
 
-    [MaxLength(200)]
-    [Column("name")]
-    public string Name { get; set; } = null!;
-
-    [MaxLength(2000)]
-    [Column("description")]
-    public string? Description { get; set; }
-
     [Column("start_date")]
     public DateTime StartDate { get; set; }
 
@@ -46,5 +38,5 @@ public class Competition
 
     public SpreadsheetReference Spreadsheet { get; set; } = null!;
 
-    public ICollection<CompetitionUser>? Members { get; set; }
+    // public ICollection<CompetitionUser>? Members { get; set; }
 }

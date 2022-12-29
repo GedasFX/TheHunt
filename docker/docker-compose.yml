@@ -1,14 +1,19 @@
-version: '3.1'
+version: '3'
 
 services:
 
   db:
     image: postgres:15-alpine
     ports:
-      - 5432:5432
+      - "5432:5432"
     restart: always
     environment:
       POSTGRES_PASSWORD: example
+      
+  redis:
+    image: redislabs/rejson:latest
+    ports:
+      - "6379:6379"
 
   # adminer:
   #   image: adminer

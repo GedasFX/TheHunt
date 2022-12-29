@@ -13,7 +13,7 @@ public static class TheHuntDependencyInjection
     }
 
 
-    private class DiscordSocketClientWrapper : DiscordSocketClient
+    private sealed class DiscordSocketClientWrapper : DiscordSocketClient
     {
         private readonly string _botToken;
 

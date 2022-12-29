@@ -19,6 +19,7 @@ public static class ApplicationModule
         services.AddDbContext<AppDbContext>(o => o
             .UseNpgsql("Server=127.0.0.1;Port=5432;Database=TheHunt;User Id=postgres;Password=example;Include Error Detail=true")
             .EnableSensitiveDataLogging());
+        services.AddStackExchangeRedisCache(o => o.Configuration = "localhost");
 
         services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
         services.AddMediatR(typeof(ValidationBehavior<,>).Assembly);
