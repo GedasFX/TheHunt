@@ -19,15 +19,16 @@ var serviceCollection = new ServiceCollection()
     .AddLogging(l => l.AddConsole().SetMinimumLevel(LogLevel.Trace));
 
 serviceCollection.AddApplication(configuration)
-    .AddDiscord(configuration["Discord:Token"]);
+    .AddDiscord(configuration["Discord:Token"]!);
+serviceCollection.AddSingleton(_ => new MySheet("google.json"));
 
 serviceCollection.AddHttpClient<CdnHttpClient>();
 
 var serviceProvider = serviceCollection.BuildServiceProvider();
-await new MySheet().Playground();
+// await new MySheet().Playground();
 var discord = serviceProvider.GetRequiredService<DiscordSocketClient>();
 await discord.StartAsync();
-
+ 
 var channelCache = new Dictionary<ulong, bool>();
 using (var scope = serviceProvider.CreateScope())
 {
@@ -39,7 +40,6 @@ using (var scope = serviceProvider.CreateScope())
         channelCache.Add(competition.ChannelId, true);
     }
 }
-
 
 
 discord.MessageReceived += async message =>
@@ -56,14 +56,14 @@ discord.MessageReceived += async message =>
         .WithAuthor(message.Author)
         .WithCurrentTimestamp()
         .Build();
-    
+
     foreach (var attachment in message.Attachments)
     {
         if (!attachment.ContentType.StartsWith("image/"))
             continue;
 
-        await using var stream = await serviceProvider.GetRequiredService<CdnHttpClient>().GetImageStream(attachment.Url);
-        await message.Channel.SendFileAsync(stream, attachment.Filename, embed: embed);
+        // await using var stream = await serviceProvider.GetRequiredService<CdnHttpClient>().GetImageStream(attachment.Url);
+        // await message.Channel.SendFileAsync(stream, attachment.Filename, embed: embed);
     }
 
     foreach (var embed1 in message.Embeds)

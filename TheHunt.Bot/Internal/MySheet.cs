@@ -1,208 +1,147 @@
-﻿using Google.Apis.Auth.OAuth2;
+﻿using System.Net;
+using Google;
+using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
 using Google.Apis.Sheets.v4.Data;
-using Microsoft.Extensions.Caching.Memory;
+using TheHunt.Application;
+using TheHunt.Domain.Models;
 
 namespace TheHunt.Bot.Internal;
 
 public class MySheet
 {
     private readonly SheetsService _service;
-    private const string SheetId = "1yPwaaznSMMXRVW4LUEm8L6-69dqFEdoeX7StQP0br-M";
 
-    private IDictionary<ulong, string> SheetsMap { get; } = new Dictionary<ulong, string>();
+    private static string[] Roles { get; } = { "Member", "🔍 Verifier" };
+    // private const string SheetId = "1yPwaaznSMMXRVW4LUEm8L6-69dqFEdoeX7StQP0br-M";
 
-    public MySheet()
+    // private IDictionary<ulong, CompetitionMap> SheetsMap { get; } = new Dictionary<ulong, CompetitionMap>();
+
+    public MySheet(string googleCredentialsFile)
     {
         _service = new SheetsService(new BaseClientService.Initializer()
         {
-            HttpClientInitializer = GoogleCredential.FromFile("google.json")
+            HttpClientInitializer = GoogleCredential.FromFile(googleCredentialsFile)
         });
     }
 
     public async Task Playground()
     {
-        // await CreateCompetition("teciui");
-        // var re = _service.Spreadsheets.Values.Append(new ValueRange()
-        // {
-        //     Values = new[] { new[] {  } },
-        //     
-        // });
-        // re.ValueInputOption = SpreadsheetsResource.ValuesResource.AppendRequest.ValueInputOptionEnum.USERENTERED;
-
-        // await AddMember()
-        // await AddSubmission(1234, 1234, "https://cdn.discordapp.com/attachments/837377172321992754/1057686219124920421/best_scarf_open_eyes_no_bg.png",
-        //     DateTime.UtcNow);
     }
 
-    public async Task AddMember(ulong competitionId, ulong userId, string displayName, string? team)
+    public async Task AddMember(SpreadsheetReference sheet, ulong userId, string displayName, int role, string? team)
     {
-        var re = _service.Spreadsheets.Values.Append(new ValueRange()
-        {
-            Values = new IList<object?>[]
-            {
-                // Id, DisplayName, Team
-                new object?[]
-                {
-                    userId, displayName, team
-                }
-            },
-        }, SheetId, $"__{competitionId}__submissions!A1:D");
-        re.ValueInputOption = SpreadsheetsResource.ValuesResource.AppendRequest.ValueInputOptionEnum.USERENTERED;
-    }
-
-    public async Task AddSubmission(ulong competitionId, ulong submissionId, ulong submitterId, ulong verifierId, string imageUrl, DateTime date)
-    {
-        var re = _service.Spreadsheets.Values.Append(new ValueRange()
-        {
-            Values = new IList<object>[]
-            {
-                // Id, Image, Date, SubmitterName Lookup, VerifierName Lookup, Item, Bonus
-                new object[]
-                {
-                    submissionId, $"=IMAGE(\"{imageUrl}\")", date.ToString("=DATE(yyyy,MM,dd) + TI\\ME(HH,mm,ss)"), submitterId, verifierId
-                }
-            },
-        }, SheetId, $"__{competitionId}__submissions!A1:D");
-        re.ValueInputOption = SpreadsheetsResource.ValuesResource.AppendRequest.ValueInputOptionEnum.USERENTERED;
-
-        var a = await re.ExecuteAsync();
-        // a.
-    }
-
-    public async Task CreateCompetition(string competitionId)
-    {
-        var createBatch = await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
-        {
-            Requests = new[]
-            {
-                new Request()
-                {
-                    AddSheet = new AddSheetRequest()
-                    {
-                        Properties = new SheetProperties()
-                        {
-                            Hidden = true,
-                            Title = $"__{competitionId}__members",
-                            GridProperties = new GridProperties() { FrozenRowCount = 1, ColumnCount = 4 },
-                        }
-                    }
-                },
-                new Request()
-                {
-                    AddSheet = new AddSheetRequest()
-                    {
-                        Properties = new SheetProperties()
-                        {
-                            Hidden = true,
-                            Title = $"__{competitionId}__submissions",
-                            GridProperties = new GridProperties() { FrozenRowCount = 1, ColumnCount = 8 },
-                        }
-                    }
-                },
-            }
-        }, SheetId).ExecuteAsync();
-
         await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
         {
-            Requests = new[]
+            Requests = new[] 
             {
-                new Request()
+                SheetUtils.AppendRow(sheet.MembersSheet, new[]
                 {
-                    UpdateCells = new UpdateCellsRequest()
-                    {
-                        Start = new GridCoordinate() { ColumnIndex = 0, RowIndex = 0, SheetId = createBatch.Replies[0].AddSheet.Properties.SheetId },
-                        Fields = "*",
-                        Rows = new[]
-                        {
-                            new RowData()
-                            {
-                                Values = new[]
-                                {
-                                    new CellData()
-                                    {
-                                        UserEnteredValue = new ExtendedValue() { StringValue = "Id" },
-                                        UserEnteredFormat = new CellFormat() { TextFormat = new TextFormat() { Bold = true } },
-                                    },
-                                    new CellData()
-                                    {
-                                        UserEnteredValue = new ExtendedValue() { StringValue = "Name" },
-                                        UserEnteredFormat = new CellFormat() { TextFormat = new TextFormat() { Bold = true } }
-                                    },
-                                    new CellData()
-                                    {
-                                        UserEnteredValue = new ExtendedValue() { StringValue = "Team" },
-                                        UserEnteredFormat = new CellFormat() { TextFormat = new TextFormat() { Bold = true } }
-                                    },
-                                    new CellData()
-                                    {
-                                        UserEnteredValue = new ExtendedValue() { StringValue = "Role" },
-                                        UserEnteredFormat = new CellFormat() { TextFormat = new TextFormat() { Bold = true } }
-                                    },
-                                },
-                            }
-                        }
-                    }
-                },
-                new Request()
+                    SheetUtils.StringCell(userId.ToString()),
+                    SheetUtils.StringCell(displayName),
+                    SheetUtils.StringDropdownCell(Roles[role], Roles),
+                    SheetUtils.StringCell(team),
+                })
+            }
+        }, sheet.SpreadsheetId).ExecuteAsync();
+    }
+
+    // public async Task AddSubmission(ulong competitionId, ulong submissionId, ulong submitterId, ulong verifierId, string imageUrl, DateTime date, string item,
+    //     int bonus)
+    // {
+    //     var re = _service.Spreadsheets.Values.Append(new ValueRange()
+    //     {
+    //         Values = new IList<object>[]
+    //         {
+    //             // Id, Image, Date, Submitter, Verifier, Item, Points, Points Bonus
+    //             new object[]
+    //             {
+    //                 submissionId, $"=IMAGE(\"{imageUrl}\")", date.ToString("=DATE(yyyy,MM,dd) + TI\\ME(HH,mm,ss)"), submitterId, verifierId, item,
+    //                 "=VLOOKUP(INDIRECT(\"R[0]C[-1]\", FALSE), __teciui1_items!A2:C, 2, FALSE)"
+    //             }
+    //         },
+    //     }, SheetId, $"__{competitionId}_submissions!A1:D");
+    //     re.ValueInputOption = SpreadsheetsResource.ValuesResource.AppendRequest.ValueInputOptionEnum.USERENTERED;
+    //
+    //     var a = await re.ExecuteAsync();
+    //     // a.
+    // }
+
+    public async Task<SpreadsheetReference> CreateCompetition(string competitionId, string spreadsheetId)
+    {
+        try
+        {
+            var createBatch = await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
+            {
+                Requests = new[]
                 {
-                    UpdateCells = new UpdateCellsRequest()
+                    new Request { AddSheet = CreateSheet(competitionId, "members", 4) },
+                    new Request { AddSheet = CreateSheet(competitionId, "items", 3) },
+                    new Request { AddSheet = CreateSheet(competitionId, "submissions", 9) },
+                }
+            }, spreadsheetId).ExecuteAsync();
+
+            await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
+            {
+                Requests = new[]
+                {
+                    new Request { UpdateCells = AddHeaderRow(createBatch, 0, "Id", "Name", "Role", "Team") },
+                    new Request { UpdateCells = AddHeaderRow(createBatch, 1, "Item Name", "Points Value", "Part of Set") },
+                    new Request
                     {
-                        Start = new GridCoordinate() { ColumnIndex = 0, RowIndex = 0, SheetId = createBatch.Replies[1].AddSheet.Properties.SheetId },
-                        Fields = "*",
-                        Rows = new[]
-                        {
-                            new RowData()
-                            {
-                                Values = new[]
-                                {
-                                    new CellData()
-                                    {
-                                        UserEnteredValue = new ExtendedValue() { StringValue = "Id" },
-                                        UserEnteredFormat = new CellFormat() { TextFormat = new TextFormat() { Bold = true } },
-                                    },
-                                    new CellData()
-                                    {
-                                        UserEnteredValue = new ExtendedValue() { StringValue = "Image" },
-                                        UserEnteredFormat = new CellFormat() { TextFormat = new TextFormat() { Bold = true } }
-                                    },
-                                    new CellData()
-                                    {
-                                        UserEnteredValue = new ExtendedValue() { StringValue = "Date" },
-                                        UserEnteredFormat = new CellFormat() { TextFormat = new TextFormat() { Bold = true } }
-                                    },
-                                    new CellData()
-                                    {
-                                        UserEnteredValue = new ExtendedValue() { StringValue = "Submitter" },
-                                        UserEnteredFormat = new CellFormat() { TextFormat = new TextFormat() { Bold = true } }
-                                    },
-                                    new CellData()
-                                    {
-                                        UserEnteredValue = new ExtendedValue() { StringValue = "Verifier" },
-                                        UserEnteredFormat = new CellFormat() { TextFormat = new TextFormat() { Bold = true } }
-                                    },
-                                    new CellData()
-                                    {
-                                        UserEnteredValue = new ExtendedValue() { StringValue = "Item" },
-                                        UserEnteredFormat = new CellFormat() { TextFormat = new TextFormat() { Bold = true } }
-                                    },
-                                    new CellData()
-                                    {
-                                        UserEnteredValue = new ExtendedValue() { StringValue = "Points" },
-                                        UserEnteredFormat = new CellFormat() { TextFormat = new TextFormat() { Bold = true } }
-                                    },
-                                    new CellData()
-                                    {
-                                        UserEnteredValue = new ExtendedValue() { StringValue = "Points Bonus" },
-                                        UserEnteredFormat = new CellFormat() { TextFormat = new TextFormat() { Bold = true } }
-                                    },
-                                },
-                            }
-                        }
+                        UpdateCells = AddHeaderRow(createBatch, 2, "Id", "Image", "Date", "Submitter", "Verifier", "Item", "Item Points", "Bonus Points",
+                            "Points Total")
                     }
                 }
+            }, spreadsheetId).ExecuteAsync();
+
+            return new SpreadsheetReference
+            {
+                SpreadsheetId = spreadsheetId,
+                MembersSheet = (int)createBatch.Replies[0].AddSheet.Properties.SheetId!,
+                ItemsSheet = (int)createBatch.Replies[1].AddSheet.Properties.SheetId!,
+                SubmissionsSheet = (int)createBatch.Replies[2].AddSheet.Properties.SheetId!
+            };
+        }
+        catch (GoogleApiException e) when (e is { HttpStatusCode: HttpStatusCode.Forbidden, Error.Message: "The caller does not have permission" })
+        {
+            throw new EntityValidationException(
+                "The bot does not have permission to edit this spreadsheet.\n" +
+                "Send an invitation to 'the-hunt@the-hunt-373015.iam.gserviceaccount.com' with 'Editor' permissions.", e);
+        }
+    }
+
+    private static UpdateCellsRequest AddHeaderRow(BatchUpdateSpreadsheetResponse createBatch, int index, params string[] header)
+    {
+        return new UpdateCellsRequest()
+        {
+            Start = new GridCoordinate() { ColumnIndex = 0, RowIndex = 0, SheetId = createBatch.Replies[index].AddSheet.Properties.SheetId },
+            Fields = "*", Rows = new[]
+            {
+                new RowData { Values = GetHeaderCells(header).ToList() }
             }
-        }, SheetId).ExecuteAsync();
+        };
+    }
+
+    private static AddSheetRequest CreateSheet(string competitionId, string name, int columnCount)
+    {
+        return new AddSheetRequest()
+        {
+            Properties = new SheetProperties()
+            {
+                Title = $"__{competitionId}_{name}", Hidden = true,
+                GridProperties = new GridProperties() { FrozenRowCount = 1, ColumnCount = columnCount },
+            }
+        };
+    }
+
+    private static IEnumerable<CellData> GetHeaderCells(params string[] values)
+    {
+        return values.Select(value => new CellData()
+        {
+            UserEnteredValue = new ExtendedValue() { StringValue = value },
+            UserEnteredFormat = new CellFormat() { TextFormat = new TextFormat() { Bold = true } }
+        });
     }
 }

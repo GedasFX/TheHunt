@@ -26,7 +26,7 @@ public partial class CompetitionsModule
                 .Where(c => c.ChannelId == (channel != null ? channel.Id : Context.Channel.Id))
                 .Select(c => new
                 {
-                    c.Name, c.Description, c.StartDate, c.EndDate, c.CreatedAt,
+                    c.Name, c.Description, c.StartDate, c.EndDate,
                     TotalMembers = c.Members!.Count(),
                     TotalSubmissions = 0,
                     Verifiers = c.Members!.Where(m => m.IsModerator).Select(m => new { m.UserId })
@@ -48,7 +48,6 @@ public partial class CompetitionsModule
                 embed: new EmbedBuilder()
                     .WithTitle(competition.Name)
                     .WithDescription(competition.Description)
-                    .AddField("Created At", $"<t:{(int)(competition.CreatedAt - DateTime.UnixEpoch).TotalSeconds}:F>")
                     .AddField("Start Date", $"<t:{(int)(competition.StartDate - DateTime.UnixEpoch).TotalSeconds}:F>")
                     .AddField("End Date", competition.EndDate != null ? $"<t:{(int)(competition.EndDate.Value - DateTime.UnixEpoch).TotalSeconds}:F>" : "N/A")
                     .AddField("Total Members", competition.TotalMembers, inline: true)

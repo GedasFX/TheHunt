@@ -51,7 +51,6 @@ public class ModifyCompetitionCommandHandler :
             ChannelId = request.ChannelId,
             Name = request.Name, Description = request.Description,
             StartDate = request.StartDate, EndDate = request.EndDate,
-            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
             Members = new CompetitionUser[]
             {
                 new() { UserId = _requestContextAccessor.Context.UserId, IsModerator = true, RegistrationDate = DateTime.UtcNow }

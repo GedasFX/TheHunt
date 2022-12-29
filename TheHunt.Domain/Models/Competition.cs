@@ -1,13 +1,33 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace TheHunt.Domain.Models;
+
+[Owned]
+public class SpreadsheetReference
+{
+    [Column("spreadsheet_id")]
+    public string SpreadsheetId { get; set; } = null!;
+
+    [Column("sheet_members")]
+    public int MembersSheet { get; set; }
+
+    [Column("sheet_items")]
+    public int ItemsSheet { get; set; }
+
+    [Column("sheet_submissions")]
+    public int SubmissionsSheet { get; set; }
+}
 
 [Table("competitions")]
 public class Competition
 {
     [Key, Column("channel_id")]
     public ulong ChannelId { get; set; }
+
+    [Column("submission_channel_id")]
+    public ulong SubmissionChannelId { get; set; }
 
     [MaxLength(200)]
     [Column("name")]
@@ -23,12 +43,8 @@ public class Competition
     [Column("end_date")]
     public DateTime? EndDate { get; set; }
 
-    [Column("created_at")]
-    public DateTime CreatedAt { get; set; }
 
-    [Column("updated_at")]
-    public DateTime UpdatedAt { get; set; }
-
+    public SpreadsheetReference Spreadsheet { get; set; } = null!;
 
     public ICollection<CompetitionUser>? Members { get; set; }
 }
