@@ -36,6 +36,11 @@ public static class SheetUtils
         };
     }
 
+    public static IList<RowData> SingleRow(params CellData[] cells)
+    {
+        return new RowData[] { new() { Values = cells } };
+    }
+
     public static Request AppendRow(int sheetId, IList<CellData> cells)
     {
         return new Request
@@ -44,6 +49,18 @@ public static class SheetUtils
             {
                 SheetId = sheetId, Fields = "*",
                 Rows = new[] { new RowData { Values = cells } },
+            }
+        };
+    }
+
+    public static Request UpdateCells(int sheetId, int rowIdx, int colIdx, IList<RowData> rows)
+    {
+        return new Request
+        {
+            UpdateCells = new UpdateCellsRequest()
+            {
+                Rows = rows, Fields = "*",
+                Start = new GridCoordinate { SheetId = sheetId, RowIndex = rowIdx, ColumnIndex = colIdx, }
             }
         };
     }

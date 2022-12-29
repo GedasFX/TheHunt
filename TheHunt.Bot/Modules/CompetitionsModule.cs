@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using TheHunt.Application;
 using TheHunt.Application.Helpers;
 using TheHunt.Bot.Internal;
+using TheHunt.Bot.Services;
 using TheHunt.Domain;
 
 namespace TheHunt.Bot.Modules;
@@ -14,12 +15,14 @@ public partial class CompetitionsModule : InteractionModuleBase<SocketInteractio
     private readonly IRequestContextAccessor _contextAccessor;
     private readonly AppDbContext _dbContext;
     private readonly SpreadsheetService _sheet;
+    private readonly SpreadsheetQueryService _spreadsheetQueryService;
 
-    public CompetitionsModule(IRequestContextAccessor contextAccessor, AppDbContext dbContext, SpreadsheetService sheet)
+    public CompetitionsModule(IRequestContextAccessor contextAccessor, AppDbContext dbContext, SpreadsheetService sheet, SpreadsheetQueryService spreadsheetQueryService)
     {
         _contextAccessor = contextAccessor;
         _dbContext = dbContext;
         _sheet = sheet;
+        _spreadsheetQueryService = spreadsheetQueryService;
     }
 
     public override void BeforeExecute(ICommandInfo command)
@@ -66,5 +69,12 @@ public partial class CompetitionsModule : InteractionModuleBase<SocketInteractio
         await _dbContext.SaveChangesAsync();
 
         await FollowupAsync("Competition successfully created. You can view it with /competitions show");
+    }
+    
+    [RequireUserPermission(ChannelPermission.ManageChannels)]
+    [SlashCommand("reload", "Reloads the competition data from the spreadsheet.")]
+    public void Reload()
+    {
+        _spreadsheetQueryService.InvalidateCache(Context.Channel.Id, "members");
     }
 }

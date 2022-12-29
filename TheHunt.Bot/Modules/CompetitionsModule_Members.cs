@@ -75,23 +75,11 @@ public partial class CompetitionsModule
             if (competitor == null)
                 throw new EntityValidationException($"<@{user.Id}> is not part of the competition.");
 
-            await _sheet.RemoveMember((await _competitionsQueryService.GetSpreadsheetRef(Context.Channel.Id))!, competitor.RowIdx);
+            await _sheet.UpdateMemberRole((await _competitionsQueryService.GetSpreadsheetRef(Context.Channel.Id))!, competitor.RowIdx, role);
             _queryService.InvalidateCache(Context.Channel.Id, "members");
 
-            await FollowupAsync($"<@{user.Id}> was successfully removed from the competition.", ephemeral: true);
-            await FollowupAsync($"<@{Context.User.Id}> removed <@{user.Id}> from the competition.");
-            
-            // await DeferAsync(ephemeral: true);
-            //
-            // var dbUser = await _dbContext.CompetitionUsers.SingleOrDefaultAsync(c => c.UserId == user.Id && c.CompetitionId == Context.Channel.Id);
-            // if (dbUser == null)
-            //     throw new EntityValidationException($"<@{user.Id}> is not part of the competition.");
-            //
-            // dbUser.IsModerator = role == 1;
-            // await _dbContext.SaveChangesAsync();
-            //
-            // await FollowupAsync($"<@{user.Id}> is now a {(dbUser.IsModerator ? "Verifier" : "Regular participant")}.", ephemeral: true);
-            // await FollowupAsync($"<@{Context.User.Id}> made <@{user.Id}> a {(dbUser.IsModerator ? "Verifier" : "Regular participant")}.");
+            await FollowupAsync($"<@{user.Id}> is now a {(role == 1 ? "Verifier" : "Regular participant")}.", ephemeral: true);
+            await FollowupAsync($"<@{Context.User.Id}> made <@{user.Id}> a {(role == 1 ? "Verifier" : "Regular participant")}.");
         }
     }
 }

@@ -15,6 +15,11 @@ public class SpreadsheetService
 
     private static string[] Roles { get; } = { "Member", "🔍 Verifier" };
 
+    private const int MembersIdIndex = 0;
+    private const int MembersNameIndex = 1;
+    private const int MembersRoleIndex = 2;
+
+
     public SpreadsheetService(string googleCredentialsFile)
     {
         _service = new SheetsService(new BaseClientService.Initializer()
@@ -44,7 +49,7 @@ public class SpreadsheetService
                        .Select((t, i) => (List: t, Idx: i)).Where(t => t.List?.Count > 0).Select((t, i) => new CompetitionUser
                        {
                            UserId = ulong.Parse((string)t.List[0]), RowIdx = t.Idx,
-                           Role = (string)data.ValueRanges[roleColumnIdx].ValueRange.Values[i][0] == "🔍 Verifier" ? (byte)1 : (byte)0
+                           Role = (string)data.ValueRanges[roleColumnIdx].ValueRange.Values[i][0] == Roles[1] ? (byte)1 : (byte)0
                        }).ToList()
                    ?? Array.Empty<CompetitionUser>();
         }
@@ -77,7 +82,24 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
         }, sheet.SpreadsheetId).ExecuteAsync();
     }
 
+    public async Task UpdateMemberRole(SpreadsheetReference sheet, int rowNumber, int role)
+    {
+        await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
+        {
+            Requests = new[]
+            {
+                SheetUtils.UpdateCells(sheet.MembersSheet, rowNumber + 1, MembersRoleIndex,
+                    SheetUtils.SingleRow(SheetUtils.StringDropdownCell(Roles[role], Roles))),
+            }
+        }, sheet.SpreadsheetId).ExecuteAsync();
+    }
+
     public async Task RemoveMember(SpreadsheetReference sheet, int rowNumber)
+    {
+        await RemoveRow(sheet.SpreadsheetId, sheet.MembersSheet, rowNumber);
+    }
+
+    public async Task RemoveRow(string spreadsheetId, int sheetId, int rowNumber)
     {
         await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
         {
@@ -89,13 +111,13 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
                     {
                         Range = new DimensionRange()
                         {
-                            Dimension = "ROWS", SheetId = sheet.MembersSheet,
+                            Dimension = "ROWS", SheetId = sheetId,
                             StartIndex = rowNumber + 1, EndIndex = rowNumber + 2,
                         }
                     }
                 }
             }
-        }, sheet.SpreadsheetId).ExecuteAsync();
+        }, spreadsheetId).ExecuteAsync();
     }
 
     // public async Task AddSubmission(ulong competitionId, ulong submissionId, ulong submitterId, ulong verifierId, string imageUrl, DateTime date, string item,
