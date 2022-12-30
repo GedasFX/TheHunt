@@ -20,4 +20,11 @@ public class CompetitionsQueryService
             .Select(c => c.Spreadsheet)
             .FirstOrDefaultAsync();
     }
+
+    public async Task<bool> CompetitionExists(ulong competitionId)
+    {
+        return await _dbContext.Competitions.AsNoTracking()
+            .Where(c => c.ChannelId == competitionId)
+            .AnyAsync();
+    }
 }

@@ -1,7 +1,6 @@
 ﻿using Discord;
 using Discord.Interactions;
 using TheHunt.Application;
-using TheHunt.Bot.Internal;
 using TheHunt.Bot.Services;
 
 namespace TheHunt.Bot.Modules;

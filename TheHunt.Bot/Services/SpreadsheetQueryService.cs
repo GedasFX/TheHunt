@@ -2,7 +2,6 @@
 using NReJSON;
 using StackExchange.Redis;
 using TheHunt.Application;
-using TheHunt.Bot.Internal;
 using TheHunt.Domain.Models;
 
 namespace TheHunt.Bot.Services;

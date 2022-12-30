@@ -19,7 +19,7 @@ public static class TheHuntDependencyInjection
 
         public DiscordSocketClientWrapper(IServiceProvider serviceProvider, string botToken) : base(new DiscordSocketConfig()
         {
-            GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent
+            GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildWebhooks
         })
         {
             _botToken = botToken;

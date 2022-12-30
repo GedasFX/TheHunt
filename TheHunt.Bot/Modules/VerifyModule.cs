@@ -1,23 +1,20 @@
 ﻿using Discord;
 using Discord.Interactions;
-using TheHunt.Bot.Internal;
 using TheHunt.Bot.Services;
 
 namespace TheHunt.Bot.Modules;
 
 public class VerifyModule : InteractionModuleBase<SocketInteractionContext>
 {
-    private readonly ActiveCompetitionsProvider _competitionsProvider;
     private readonly CompetitionsQueryService _competitionsQueryService;
     private readonly SpreadsheetQueryService _spreadsheetQueryService;
     private readonly SpreadsheetService _spreadsheetService;
 
     private IEmote VerifiedEmote { get; } = new Emoji("🤣");
 
-    public VerifyModule(ActiveCompetitionsProvider competitionsProvider, CompetitionsQueryService competitionsQueryService,
+    public VerifyModule(CompetitionsQueryService competitionsQueryService,
         SpreadsheetQueryService spreadsheetQueryService, SpreadsheetService spreadsheetService)
     {
-        _competitionsProvider = competitionsProvider;
         _competitionsQueryService = competitionsQueryService;
         _spreadsheetQueryService = spreadsheetQueryService;
         _spreadsheetService = spreadsheetService;
@@ -26,7 +23,7 @@ public class VerifyModule : InteractionModuleBase<SocketInteractionContext>
     [MessageCommand("Verify Submission")]
     public async Task VerifySubmission(IUserMessage message)
     {
-        if (!_competitionsProvider.ActiveChannelMap.ContainsKey(message.Channel.Id))
+        if (!await _competitionsQueryService.CompetitionExists(message.Channel.Id))
         {
             await RespondAsync("Unable to verify submission: Channel is not associated with a competition.", ephemeral: true);
             return;
@@ -61,7 +58,7 @@ public class VerifyModule : InteractionModuleBase<SocketInteractionContext>
         var verifier = await _spreadsheetQueryService.GetCompetitionVerifier(Context.Channel.Id, Context.User.Id);
         if (verifier?.Role != 1)
         {
-            await FollowupAsync("Unable to verify submission: You are not part of the verifiers group.", ephemeral: true);
+            await RespondAsync("Unable to verify submission: You are not part of the verifiers group.", ephemeral: true);
             return;
         }
 
@@ -70,7 +67,7 @@ public class VerifyModule : InteractionModuleBase<SocketInteractionContext>
         var message = await Context.Channel.GetMessageAsync(channelId);
 
         var sheetsRef = await _competitionsQueryService.GetSpreadsheetRef(Context.Channel.Id);
-        await _spreadsheetService.AddSubmission(sheetsRef!, Context.Channel.Id, message.Id, message.Author.Id, Context.User.Id, GetAttachedImageUrl(message),
+        await _spreadsheetService.AddSubmission(sheetsRef!, message.Id, message.Author.Id, Context.User.Id, GetAttachedImageUrl(message),
             message.Timestamp.UtcDateTime, modal.Item, int.TryParse(modal.Bonus, out var bonus) ? bonus : 0);
 
         await message.AddReactionAsync(VerifiedEmote);

@@ -10,34 +10,36 @@ public class Competition
     [Key, Column("channel_id")]
     public ulong ChannelId { get; set; }
 
-    [Column("submission_channel_id")]
-    public ulong SubmissionChannelId { get; set; }
-
-    [Column("start_date")]
-    public DateTime StartDate { get; set; }
-
-    [Column("end_date")]
-    public DateTime? EndDate { get; set; }
-
-
     public SheetsRef Spreadsheet { get; set; } = null!;
 }
 
 [Owned]
 public class SheetsRef
 {
+    [StringLength(44)]
     [Column("spreadsheet_id")]
     public string SpreadsheetId { get; set; } = null!;
 
-    [Column("sheet_overview")]
-    public int OverviewSheetId { get; set; }
+    [StringLength(20)]
+    [Column("sheet_name")]
+    public string SheetName { get; set; } = null!;
 
-    [Column("sheet_members")]
-    public int MembersSheetId { get; set; }
 
-    [Column("sheet_items")]
-    public int ItemsSheetId { get; set; }
+    public Sheet Sheets { get; set; } = null!;
 
-    [Column("sheet_submissions")]
-    public int SubmissionsSheetId { get; set; }
+    [Owned]
+    public class Sheet
+    {
+        [Column("sheet_overview")]
+        public int Overview { get; set; }
+
+        [Column("sheet_members")]
+        public int Members { get; set; }
+
+        [Column("sheet_items")]
+        public int Items { get; set; }
+
+        [Column("sheet_submissions")]
+        public int Submissions { get; set; }
+    }
 }

@@ -5,9 +5,10 @@ using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
 using Google.Apis.Sheets.v4.Data;
 using TheHunt.Application;
+using TheHunt.Bot.Internal;
 using TheHunt.Domain.Models;
 
-namespace TheHunt.Bot.Internal;
+namespace TheHunt.Bot.Services;
 
 public class SpreadsheetService
 {
@@ -36,10 +37,14 @@ public class SpreadsheetService
             {
                 DataFilters = new[]
                 {
-                    new DataFilter()
-                        { GridRange = new GridRange() { SheetId = sheet.MembersSheetId, StartRowIndex = 1, StartColumnIndex = 0, EndColumnIndex = 1 } },
-                    new DataFilter()
-                        { GridRange = new GridRange() { SheetId = sheet.MembersSheetId, StartRowIndex = 1, StartColumnIndex = 2, EndColumnIndex = 3 } },
+                    new DataFilter
+                    {
+                        GridRange = new GridRange { SheetId = sheet.Sheets.Members, StartRowIndex = 1, StartColumnIndex = 0, EndColumnIndex = 1 }
+                    },
+                    new DataFilter
+                    {
+                        GridRange = new GridRange { SheetId = sheet.Sheets.Members, StartRowIndex = 1, StartColumnIndex = 2, EndColumnIndex = 3 }
+                    },
                 }
             }, sheet.SpreadsheetId).ExecuteAsync();
 
@@ -71,7 +76,7 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
         {
             Requests = new[]
             {
-                SheetUtils.AppendRow(sheet.MembersSheetId, new[]
+                SheetUtils.AppendRow(sheet.Sheets.Members, new[]
                 {
                     SheetUtils.StringCell(userId.ToString()),
                     SheetUtils.StringCell(displayName),
@@ -88,7 +93,7 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
         {
             Requests = new[]
             {
-                SheetUtils.UpdateCells(sheet.MembersSheetId, rowNumber + 1, MembersRoleIndex,
+                SheetUtils.UpdateCells(sheet.Sheets.Members, rowNumber + 1, MembersRoleIndex,
                     SheetUtils.SingleRow(SheetUtils.StringDropdownCell(Roles[role], Roles))),
             }
         }, sheet.SpreadsheetId).ExecuteAsync();
@@ -96,7 +101,7 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
 
     public async Task RemoveMember(SheetsRef sheet, int rowNumber)
     {
-        await RemoveRow(sheet.SpreadsheetId, sheet.MembersSheetId, rowNumber);
+        await RemoveRow(sheet.SpreadsheetId, sheet.Sheets.Members, rowNumber);
     }
 
     public async Task RemoveRow(string spreadsheetId, int sheetId, int rowNumber)
@@ -120,22 +125,24 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
         }, spreadsheetId).ExecuteAsync();
     }
 
-    public async Task AddSubmission(SheetsRef sheetsRef, ulong competitionId, ulong submissionId, ulong submitterId, ulong verifierId, string? imageUrl,
+    public async Task AddSubmission(SheetsRef sheetsRef, ulong submissionId, ulong submitterId, ulong verifierId, string? imageUrl,
         DateTime date, string? item, int bonus)
     {
         await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
         {
             Requests = new[]
             {
-                SheetUtils.AppendRow(sheetsRef.SubmissionsSheetId, new[]
+                SheetUtils.AppendRow(sheetsRef.Sheets.Submissions, new[]
                 {
                     SheetUtils.StringCell(submissionId.ToString()),
                     SheetUtils.FormulaCell(imageUrl != null ? $"=IMAGE(\"{imageUrl}\")" : null),
                     SheetUtils.FormulaCell(date.ToString("=DATE(yyyy,MM,dd) + TI\\ME(HH,mm,ss)")),
                     SheetUtils.StringCell(item),
-                    SheetUtils.FormulaCell($"=VLOOKUP(\"{submitterId}\", '__{competitionId}_members'!A2:B, 2, FALSE)"),
-                    SheetUtils.FormulaCell($"=VLOOKUP(\"{verifierId}\", '__{competitionId}_members'!A2:B, 2, FALSE)"),
-                    SheetUtils.FormulaCell($"=VLOOKUP(INDIRECT(\"R[0]C[-3]\", FALSE), '__{competitionId}_items'!A2:C, 2, FALSE)"),
+                    SheetUtils.StringCell(submitterId.ToString()),
+                    SheetUtils.FormulaCell($"=VLOOKUP(INDIRECT(\"R[0]C[-1]\", FALSE), '__{sheetsRef.SheetName}_members'!A2:B, 2, FALSE)"),
+                    SheetUtils.StringCell(verifierId.ToString()),
+                    SheetUtils.FormulaCell($"=VLOOKUP(INDIRECT(\"R[0]C[-1]\", FALSE), '__{sheetsRef.SheetName}_members'!A2:B, 2, FALSE)"),
+                    SheetUtils.FormulaCell($"=VLOOKUP(INDIRECT(\"R[0]C[-3]\", FALSE), '__{sheetsRef.SheetName}_items'!A2:C, 2, FALSE)"),
                     SheetUtils.NumberCell(bonus),
                     SheetUtils.FormulaCell("=IFNA(INDIRECT(\"R[0]C[-2]\", FALSE)) + INDIRECT(\"R[0]C[-1]\", FALSE)"),
                 })
@@ -143,7 +150,7 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
         }, sheetsRef.SpreadsheetId).ExecuteAsync();
     }
 
-    public async Task<SheetsRef> CreateCompetition(string competitionId, string spreadsheetId)
+    public async Task<SheetsRef> CreateCompetition(string spreadsheetId, string sheetName)
     {
         try
         {
@@ -151,9 +158,9 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
             {
                 Requests = new[]
                 {
-                    new Request { AddSheet = CreateSheet(competitionId, "members", 4) },
-                    new Request { AddSheet = CreateSheet(competitionId, "items", 3) },
-                    new Request { AddSheet = CreateSheet(competitionId, "submissions", 9) },
+                    new Request { AddSheet = CreateSheet(sheetName, "members", 4) },
+                    new Request { AddSheet = CreateSheet(sheetName, "items", 3) },
+                    new Request { AddSheet = CreateSheet(sheetName, "submissions", 11) },
                 }
             }, spreadsheetId).ExecuteAsync();
 
@@ -165,25 +172,28 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
                     new Request { UpdateCells = AddHeaderRow(createBatch, 1, "Item Name", "Points Value", "Part of Set") },
                     new Request
                     {
-                        UpdateCells = AddHeaderRow(createBatch, 2, "Id", "Image", "Date", "Item", "Submitter", "Verifier", "Points Item", "Points Bonus",
-                            "Points Total")
+                        UpdateCells = AddHeaderRow(createBatch, 2, "Id", "Image", "Date", "Item", "Submitter Id", "Submitter", "Verifier Id", "Verifier",
+                            "Points Item", "Points Bonus", "Points Total")
                     }
                 }
             }, spreadsheetId).ExecuteAsync();
 
             return new SheetsRef
             {
-                SpreadsheetId = spreadsheetId,
-                MembersSheetId = (int)createBatch.Replies[0].AddSheet.Properties.SheetId!,
-                ItemsSheetId = (int)createBatch.Replies[1].AddSheet.Properties.SheetId!,
-                SubmissionsSheetId = (int)createBatch.Replies[2].AddSheet.Properties.SheetId!
+                SpreadsheetId = spreadsheetId, SheetName = sheetName,
+                Sheets = new SheetsRef.Sheet()
+                {
+                    Members = (int)createBatch.Replies[0].AddSheet.Properties.SheetId!,
+                    Items = (int)createBatch.Replies[1].AddSheet.Properties.SheetId!,
+                    Submissions = (int)createBatch.Replies[2].AddSheet.Properties.SheetId!,
+                },
             };
         }
         catch (GoogleApiException e) when (e is { HttpStatusCode: HttpStatusCode.Forbidden, Error.Message: "The caller does not have permission" })
         {
             throw new EntityValidationException(
                 "The bot does not have permission to edit this spreadsheet.\n" +
-                "Send an invitation to 'the-hunt@the-hunt-373015.iam.gserviceaccount.com' with 'Editor' permissions.", e);
+                "Send an invitation to `the-hunt@the-hunt-373015.iam.gserviceaccount.com` with `Editor` permissions.", e);
         }
     }
 
@@ -199,13 +209,13 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
         };
     }
 
-    private static AddSheetRequest CreateSheet(string competitionId, string name, int columnCount)
+    private static AddSheetRequest CreateSheet(string sheetName, string name, int columnCount)
     {
         return new AddSheetRequest()
         {
             Properties = new SheetProperties()
             {
-                Title = $"__{competitionId}_{name}", Hidden = true,
+                Title = $"__{sheetName}_{name}", Hidden = true,
                 GridProperties = new GridProperties() { FrozenRowCount = 1, ColumnCount = columnCount },
             }
         };
