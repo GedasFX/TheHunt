@@ -20,11 +20,11 @@ public class Competition
     public DateTime? EndDate { get; set; }
 
 
-    public SpreadsheetReference Spreadsheet { get; set; } = null!;
+    public SheetsRef Spreadsheet { get; set; } = null!;
 }
 
 [Owned]
-public class SpreadsheetReference
+public class SheetsRef
 {
     [Column("spreadsheet_id")]
     public string SpreadsheetId { get; set; } = null!;

@@ -94,11 +94,13 @@ public static class SubmissionEventHandler
 
     private static string GetAttachedImageUrl(IMessage message)
     {
-        foreach (var attachment in message.Attachments.Where(a => a.ContentType.StartsWith("image/")))
-            return attachment.Url;
+        var url = message.Attachments.FirstOrDefault(a => a.ContentType.StartsWith("image/"))?.Url;
+        if (url != null)
+            return url;
 
-        foreach (var embed in message.Embeds.Where(e => e.Type == EmbedType.Image))
-            return embed.Url;
+        url = message.Embeds.FirstOrDefault(e => e.Type == EmbedType.Image)?.Url;
+        if (url != null)
+            return url;
 
         throw new EntityValidationException("No image was found on the message.");
     }

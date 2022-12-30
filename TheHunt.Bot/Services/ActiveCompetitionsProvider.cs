@@ -9,22 +9,12 @@ public class ActiveCompetitionsProvider
 {
     private readonly IServiceProvider _serviceProvider;
 
-    public ConcurrentDictionary<ulong, DateTime?> ActiveChannelMap { get; private set; } = new();
+    public ConcurrentDictionary<ulong, DateTime?> ActiveChannelMap { get; } = new();
 
     public ActiveCompetitionsProvider(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
-
-        Task.Run(async () =>
-        {
-            while (true)
-            {
-                await Initialize();
-                await Task.Delay(TimeSpan.FromDays(1));
-            }
-
-            // ReSharper disable once FunctionNeverReturns
-        });
+        Task.Run(Initialize);
     }
 
     private async Task Initialize()

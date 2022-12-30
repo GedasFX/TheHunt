@@ -28,7 +28,7 @@ public class SpreadsheetService
         });
     }
 
-    public async Task<IReadOnlyList<CompetitionUser>> GetMembers(SpreadsheetReference sheet)
+    public async Task<IReadOnlyList<CompetitionUser>> GetMembers(SheetsRef sheet)
     {
         try
         {
@@ -65,7 +65,7 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
         }
     }
 
-    public async Task AddMember(SpreadsheetReference sheet, ulong userId, string displayName, int role, string? team)
+    public async Task AddMember(SheetsRef sheet, ulong userId, string displayName, int role, string? team)
     {
         await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
         {
@@ -82,7 +82,7 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
         }, sheet.SpreadsheetId).ExecuteAsync();
     }
 
-    public async Task UpdateMemberRole(SpreadsheetReference sheet, int rowNumber, int role)
+    public async Task UpdateMemberRole(SheetsRef sheet, int rowNumber, int role)
     {
         await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
         {
@@ -94,7 +94,7 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
         }, sheet.SpreadsheetId).ExecuteAsync();
     }
 
-    public async Task RemoveMember(SpreadsheetReference sheet, int rowNumber)
+    public async Task RemoveMember(SheetsRef sheet, int rowNumber)
     {
         await RemoveRow(sheet.SpreadsheetId, sheet.MembersSheetId, rowNumber);
     }
@@ -120,28 +120,30 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
         }, spreadsheetId).ExecuteAsync();
     }
 
-    // public async Task AddSubmission(ulong competitionId, ulong submissionId, ulong submitterId, ulong verifierId, string imageUrl, DateTime date, string item,
-    //     int bonus)
-    // {
-    //     var re = _service.Spreadsheets.Values.Append(new ValueRange()
-    //     {
-    //         Values = new IList<object>[]
-    //         {
-    //             // Id, Image, Date, Submitter, Verifier, Item, Points, Points Bonus
-    //             new object[]
-    //             {
-    //                 submissionId, $"=IMAGE(\"{imageUrl}\")", date.ToString("=DATE(yyyy,MM,dd) + TI\\ME(HH,mm,ss)"), submitterId, verifierId, item,
-    //                 "=VLOOKUP(INDIRECT(\"R[0]C[-1]\", FALSE), __teciui1_items!A2:C, 2, FALSE)"
-    //             }
-    //         },
-    //     }, SheetId, $"__{competitionId}_submissions!A1:D");
-    //     re.ValueInputOption = SpreadsheetsResource.ValuesResource.AppendRequest.ValueInputOptionEnum.USERENTERED;
-    //
-    //     var a = await re.ExecuteAsync();
-    //     // a.
-    // }
+    public async Task AddSubmission(SheetsRef sheetsRef, ulong competitionId, ulong submissionId, ulong submitterId, ulong verifierId, string? imageUrl,
+        DateTime date, string? item, int bonus)
+    {
+        await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
+        {
+            Requests = new[]
+            {
+                SheetUtils.AppendRow(sheetsRef.SubmissionsSheetId, new[]
+                {
+                    SheetUtils.StringCell(submissionId.ToString()),
+                    SheetUtils.FormulaCell(imageUrl != null ? $"=IMAGE(\"{imageUrl}\")" : null),
+                    SheetUtils.FormulaCell(date.ToString("=DATE(yyyy,MM,dd) + TI\\ME(HH,mm,ss)")),
+                    SheetUtils.StringCell(item),
+                    SheetUtils.FormulaCell($"=VLOOKUP(\"{submitterId}\", '__{competitionId}_members'!A2:B, 2, FALSE)"),
+                    SheetUtils.FormulaCell($"=VLOOKUP(\"{verifierId}\", '__{competitionId}_members'!A2:B, 2, FALSE)"),
+                    SheetUtils.FormulaCell($"=VLOOKUP(INDIRECT(\"R[0]C[-3]\", FALSE), '__{competitionId}_items'!A2:C, 2, FALSE)"),
+                    SheetUtils.NumberCell(bonus),
+                    SheetUtils.FormulaCell("=IFNA(INDIRECT(\"R[0]C[-2]\", FALSE)) + INDIRECT(\"R[0]C[-1]\", FALSE)"),
+                })
+            }
+        }, sheetsRef.SpreadsheetId).ExecuteAsync();
+    }
 
-    public async Task<SpreadsheetReference> CreateCompetition(string competitionId, string spreadsheetId)
+    public async Task<SheetsRef> CreateCompetition(string competitionId, string spreadsheetId)
     {
         try
         {
@@ -163,13 +165,13 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
                     new Request { UpdateCells = AddHeaderRow(createBatch, 1, "Item Name", "Points Value", "Part of Set") },
                     new Request
                     {
-                        UpdateCells = AddHeaderRow(createBatch, 2, "Id", "Image", "Date", "Submitter", "Verifier", "Item", "Item Points", "Bonus Points",
+                        UpdateCells = AddHeaderRow(createBatch, 2, "Id", "Image", "Date", "Item", "Submitter", "Verifier", "Points Item", "Points Bonus",
                             "Points Total")
                     }
                 }
             }, spreadsheetId).ExecuteAsync();
 
-            return new SpreadsheetReference
+            return new SheetsRef
             {
                 SpreadsheetId = spreadsheetId,
                 MembersSheetId = (int)createBatch.Replies[0].AddSheet.Properties.SheetId!,

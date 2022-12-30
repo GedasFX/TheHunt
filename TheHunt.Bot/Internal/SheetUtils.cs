@@ -19,6 +19,14 @@ public static class SheetUtils
             UserEnteredValue = value != null ? new ExtendedValue() { StringValue = value } : null,
         };
     }
+    
+    public static CellData FormulaCell(string? value)
+    {
+        return new CellData
+        {
+            UserEnteredValue = value != null ? new ExtendedValue() { FormulaValue = value } : null,
+        };
+    }
 
     public static CellData StringDropdownCell(string? value, IEnumerable<string> choices)
     {

@@ -13,7 +13,7 @@ public class CompetitionsQueryService
         _dbContext = dbContext;
     }
 
-    public async Task<SpreadsheetReference?> GetSpreadsheetRef(ulong competitionId)
+    public async Task<SheetsRef?> GetSpreadsheetRef(ulong competitionId)
     {
         return await _dbContext.Competitions.AsNoTracking()
             .Where(c => c.ChannelId == competitionId)

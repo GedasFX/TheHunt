@@ -24,6 +24,13 @@ public class SpreadsheetQueryService
         _cache = cache.GetDatabase();
     }
     
+    public async Task<CompetitionUser?> GetCompetitionVerifier(ulong competitionId, ulong userId)
+    {
+        // TODO: Improve
+        var members = await GetCompetitionVerifiers(competitionId);
+        return members.TryGetValue(userId, out var member) ? member : null;
+    }
+    
     public async Task<IReadOnlyDictionary<ulong, CompetitionUser>> GetCompetitionVerifiers(ulong competitionId)
     {
         // TODO: Improve
