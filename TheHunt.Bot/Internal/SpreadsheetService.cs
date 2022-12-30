@@ -37,9 +37,9 @@ public class SpreadsheetService
                 DataFilters = new[]
                 {
                     new DataFilter()
-                        { GridRange = new GridRange() { SheetId = sheet.MembersSheet, StartRowIndex = 1, StartColumnIndex = 0, EndColumnIndex = 1 } },
+                        { GridRange = new GridRange() { SheetId = sheet.MembersSheetId, StartRowIndex = 1, StartColumnIndex = 0, EndColumnIndex = 1 } },
                     new DataFilter()
-                        { GridRange = new GridRange() { SheetId = sheet.MembersSheet, StartRowIndex = 1, StartColumnIndex = 2, EndColumnIndex = 3 } },
+                        { GridRange = new GridRange() { SheetId = sheet.MembersSheetId, StartRowIndex = 1, StartColumnIndex = 2, EndColumnIndex = 3 } },
                 }
             }, sheet.SpreadsheetId).ExecuteAsync();
 
@@ -71,7 +71,7 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
         {
             Requests = new[]
             {
-                SheetUtils.AppendRow(sheet.MembersSheet, new[]
+                SheetUtils.AppendRow(sheet.MembersSheetId, new[]
                 {
                     SheetUtils.StringCell(userId.ToString()),
                     SheetUtils.StringCell(displayName),
@@ -88,7 +88,7 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
         {
             Requests = new[]
             {
-                SheetUtils.UpdateCells(sheet.MembersSheet, rowNumber + 1, MembersRoleIndex,
+                SheetUtils.UpdateCells(sheet.MembersSheetId, rowNumber + 1, MembersRoleIndex,
                     SheetUtils.SingleRow(SheetUtils.StringDropdownCell(Roles[role], Roles))),
             }
         }, sheet.SpreadsheetId).ExecuteAsync();
@@ -96,7 +96,7 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
 
     public async Task RemoveMember(SpreadsheetReference sheet, int rowNumber)
     {
-        await RemoveRow(sheet.SpreadsheetId, sheet.MembersSheet, rowNumber);
+        await RemoveRow(sheet.SpreadsheetId, sheet.MembersSheetId, rowNumber);
     }
 
     public async Task RemoveRow(string spreadsheetId, int sheetId, int rowNumber)
@@ -172,9 +172,9 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
             return new SpreadsheetReference
             {
                 SpreadsheetId = spreadsheetId,
-                MembersSheet = (int)createBatch.Replies[0].AddSheet.Properties.SheetId!,
-                ItemsSheet = (int)createBatch.Replies[1].AddSheet.Properties.SheetId!,
-                SubmissionsSheet = (int)createBatch.Replies[2].AddSheet.Properties.SheetId!
+                MembersSheetId = (int)createBatch.Replies[0].AddSheet.Properties.SheetId!,
+                ItemsSheetId = (int)createBatch.Replies[1].AddSheet.Properties.SheetId!,
+                SubmissionsSheetId = (int)createBatch.Replies[2].AddSheet.Properties.SheetId!
             };
         }
         catch (GoogleApiException e) when (e is { HttpStatusCode: HttpStatusCode.Forbidden, Error.Message: "The caller does not have permission" })

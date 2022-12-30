@@ -4,22 +4,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace TheHunt.Domain.Models;
 
-[Owned]
-public class SpreadsheetReference
-{
-    [Column("spreadsheet_id")]
-    public string SpreadsheetId { get; set; } = null!;
-
-    [Column("sheet_members")]
-    public int MembersSheet { get; set; }
-
-    [Column("sheet_items")]
-    public int ItemsSheet { get; set; }
-
-    [Column("sheet_submissions")]
-    public int SubmissionsSheet { get; set; }
-}
-
 [Table("competitions")]
 public class Competition
 {
@@ -37,6 +21,23 @@ public class Competition
 
 
     public SpreadsheetReference Spreadsheet { get; set; } = null!;
+}
 
-    // public ICollection<CompetitionUser>? Members { get; set; }
+[Owned]
+public class SpreadsheetReference
+{
+    [Column("spreadsheet_id")]
+    public string SpreadsheetId { get; set; } = null!;
+
+    [Column("sheet_overview")]
+    public int OverviewSheetId { get; set; }
+
+    [Column("sheet_members")]
+    public int MembersSheetId { get; set; }
+
+    [Column("sheet_items")]
+    public int ItemsSheetId { get; set; }
+
+    [Column("sheet_submissions")]
+    public int SubmissionsSheetId { get; set; }
 }

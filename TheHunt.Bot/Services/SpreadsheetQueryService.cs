@@ -23,6 +23,13 @@ public class SpreadsheetQueryService
         _competitionsQueryService = competitionsQueryService;
         _cache = cache.GetDatabase();
     }
+    
+    public async Task<IReadOnlyDictionary<ulong, CompetitionUser>> GetCompetitionVerifiers(ulong competitionId)
+    {
+        // TODO: Improve
+        var members = await GetCompetitionMembers(competitionId);
+        return members.Where(m => m.Value.Role == 1).ToDictionary(m => m.Key, m => m.Value);
+    }
 
     public async Task<IReadOnlyDictionary<ulong, CompetitionUser>> GetCompetitionMembers(ulong competitionId)
     {
@@ -42,6 +49,16 @@ public class SpreadsheetQueryService
             return result.FirstOrDefault();
 
         return (await GetCompetitionMembers(competitionId)).TryGetValue(userId, out var val) ? val : null;
+    }
+    
+    public async Task<int> GetCompetitionMembersCount(ulong competitionId)
+    {
+        var result = await _cache.JsonObjectLengthAsync($"__{competitionId}_members");
+
+        if (result != null)
+            return (int)result;
+
+        return (await GetCompetitionMembers(competitionId)).Count;
     }
 
     public void InvalidateCache(ulong competitionId, string cache)
