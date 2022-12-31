@@ -26,6 +26,8 @@ public partial class CompetitionsModule : InteractionModuleBase<SocketInteractio
     public async Task Create(
         [Summary(description: "Google Spreadsheet Id. 'https://docs.google.com/spreadsheets/d/<SPREADSHEET_ID>/edit#gid=0'")]
         string spreadsheetId,
+        [Summary(description: "Users with this role will be able to verify submissions.")]
+        IRole verifierRole,
         [Summary(description: "Name of the competition. Defaults to specified channel name.")]
         string? name = null)
     {
@@ -37,12 +39,12 @@ public partial class CompetitionsModule : InteractionModuleBase<SocketInteractio
 
         await DeferAsync(ephemeral: true);
 
-        if (await _dbContext.Competitions.AnyAsync(c => c.ChannelId == Context.Channel.Id))
+        if (await _dbContext.Competitions.AsNoTracking().AnyAsync(c => c.ChannelId == Context.Channel.Id))
             throw new EntityValidationException("This channel already has a competition. Please use a different channel to create a new competition.");
 
         var entity = new Domain.Models.Competition
         {
-            ChannelId = Context.Channel.Id,
+            ChannelId = Context.Channel.Id, VerifierRoleId = verifierRole.Id,
             Spreadsheet = await _sheet.CreateCompetition(spreadsheetId, name ?? $"#{Context.Channel.Name}")
         };
 

@@ -1,40 +1,29 @@
-﻿using Discord;
+﻿using System.Diagnostics;
+using Discord;
 using Discord.Interactions;
+using Discord.WebSocket;
 using TheHunt.Bot.Services;
+using TheHunt.Bot.Utils;
 
 namespace TheHunt.Bot.Modules;
 
 public class VerifyModule : InteractionModuleBase<SocketInteractionContext>
 {
     private readonly CompetitionsQueryService _competitionsQueryService;
-    private readonly SpreadsheetQueryService _spreadsheetQueryService;
     private readonly SpreadsheetService _spreadsheetService;
 
-    private IEmote VerifiedEmote { get; } = new Emoji("✅");
+    private static IEmote VerifiedEmote { get; } = new Emoji("✅");
 
-    public VerifyModule(CompetitionsQueryService competitionsQueryService,
-        SpreadsheetQueryService spreadsheetQueryService, SpreadsheetService spreadsheetService)
+    public VerifyModule(CompetitionsQueryService competitionsQueryService, SpreadsheetService spreadsheetService)
     {
         _competitionsQueryService = competitionsQueryService;
-        _spreadsheetQueryService = spreadsheetQueryService;
         _spreadsheetService = spreadsheetService;
     }
 
+    [EnabledInDm(false)]
     [MessageCommand("Verify Submission")]
     public async Task VerifySubmission(IUserMessage message)
     {
-        if (!await _competitionsQueryService.CompetitionExists(message.Channel.Id))
-        {
-            await RespondAsync("Unable to verify submission: Channel is not associated with a competition.", ephemeral: true);
-            return;
-        }
-
-        if (await message.GetReactionUsersAsync(VerifiedEmote, 1).Flatten().AnyAsync())
-        {
-            await RespondAsync("Submission was already verified.", ephemeral: true);
-            return;
-        }
-
         await RespondWithModalAsync<SubmissionModal>($"submission_create:{message.Id}");
     }
 
@@ -53,25 +42,44 @@ public class VerifyModule : InteractionModuleBase<SocketInteractionContext>
     }
 
     [ModalInteraction("submission_create:*")]
-    public async Task ModalResponse(ulong channelId, SubmissionModal modal)
+    public async Task VerifySubmissionCallback(ulong channelId, SubmissionModal modal)
     {
-        var verifier = await _spreadsheetQueryService.GetCompetitionVerifier(Context.Channel.Id, Context.User.Id);
-        if (verifier?.Role != 1)
-        {
-            await RespondAsync("Unable to verify submission: You are not part of the verifiers group.", ephemeral: true);
-            return;
-        }
+        if (Context.User is not SocketGuildUser contextGuildUser)
+            throw new UnreachableException("Invoked VerifySubmission in DM Context.");
 
         await DeferAsync(ephemeral: true);
 
         var message = await Context.Channel.GetMessageAsync(channelId);
 
-        var sheetsRef = await _competitionsQueryService.GetSpreadsheetRef(Context.Channel.Id);
+        if (await message.GetReactionUsersAsync(VerifiedEmote, 1).Flatten().AnyAsync())
+        {
+            await FollowupAsync("Submission was already verified.", ephemeral: true);
+            return;
+        }
+
+        var competitionVerifierRole = await _competitionsQueryService.GetVerifierRoleId(message.Channel.Id);
+        if (competitionVerifierRole == default)
+        {
+            await FollowupAsync("Unable to verify submission: Channel is not associated with a competition.", ephemeral: true);
+            return;
+        }
+
+        if (!contextGuildUser.Roles.Any(r => r.Id == competitionVerifierRole))
+        {
+            await FollowupAsync(
+                $"Unable to verify submission: Only members in {MentionUtils.MentionRole(competitionVerifierRole)} role can verify submissions.",
+                ephemeral: true);
+            return;
+        }
+
+        var sheetsRef = (await _competitionsQueryService.GetSpreadsheetRef(Context.Channel.Id))!;
         await _spreadsheetService.AddSubmission(sheetsRef!, message.Id, message.GetJumpUrl(), message.Author.Id, Context.User.Id, GetAttachedImageUrl(message),
             message.Timestamp.UtcDateTime, modal.Item, int.TryParse(modal.Bonus, out var bonus) ? bonus : 0);
 
         await message.AddReactionAsync(VerifiedEmote);
-        await FollowupAsync("Submission verified successfully!", ephemeral: true);
+        await FollowupAsync("Submission verified successfully!", ephemeral: true,
+            components: new ComponentBuilder().AddRow(new ActionRowBuilder()
+                .WithSpreadsheetRefButton("Open Google Sheets", "📑", sheetsRef.SpreadsheetId, sheetsRef.Sheets.Submissions)).Build());
     }
 
     private static string? GetAttachedImageUrl(IMessage message)

@@ -1,6 +1,6 @@
 ﻿using Google.Apis.Sheets.v4.Data;
 
-namespace TheHunt.Bot.Internal;
+namespace TheHunt.Bot.Utils;
 
 public static class SheetUtils
 {

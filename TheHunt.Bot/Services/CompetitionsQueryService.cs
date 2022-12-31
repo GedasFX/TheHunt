@@ -12,6 +12,13 @@ public class CompetitionsQueryService
     {
         _dbContext = dbContext;
     }
+    
+    public async Task<Domain.Models.Competition?> GetCompetition(ulong competitionId)
+    {
+        return await _dbContext.Competitions.AsNoTracking()
+            .Where(c => c.ChannelId == competitionId)
+            .FirstOrDefaultAsync();
+    }
 
     public async Task<SheetsRef?> GetSpreadsheetRef(ulong competitionId)
     {
@@ -26,5 +33,13 @@ public class CompetitionsQueryService
         return await _dbContext.Competitions.AsNoTracking()
             .Where(c => c.ChannelId == competitionId)
             .AnyAsync();
+    }
+    
+    public async Task<ulong> GetVerifierRoleId(ulong competitionId)
+    {
+        return await _dbContext.Competitions.AsNoTracking()
+            .Where(c => c.ChannelId == competitionId)
+            .Select(c => c.VerifierRoleId)
+            .FirstOrDefaultAsync();
     }
 }

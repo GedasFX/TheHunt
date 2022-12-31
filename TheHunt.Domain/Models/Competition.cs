@@ -10,6 +10,9 @@ public class Competition
     [Key, Column("channel_id")]
     public ulong ChannelId { get; set; }
 
+    [Column("role_verifier")]
+    public ulong VerifierRoleId { get; set; }
+
     public SheetsRef Spreadsheet { get; set; } = null!;
 }
 

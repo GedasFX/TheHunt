@@ -22,20 +22,6 @@ public class SpreadsheetQueryService
         _competitionsQueryService = competitionsQueryService;
         _cache = cache.GetDatabase();
     }
-    
-    public async Task<CompetitionUser?> GetCompetitionVerifier(ulong competitionId, ulong userId)
-    {
-        // TODO: Improve
-        var members = await GetCompetitionVerifiers(competitionId);
-        return members.TryGetValue(userId, out var member) ? member : null;
-    }
-    
-    public async Task<IReadOnlyDictionary<ulong, CompetitionUser>> GetCompetitionVerifiers(ulong competitionId)
-    {
-        // TODO: Improve
-        var members = await GetCompetitionMembers(competitionId);
-        return members.Where(m => m.Value.Role == 1).ToDictionary(m => m.Key, m => m.Value);
-    }
 
     public async Task<IReadOnlyDictionary<ulong, CompetitionUser>> GetCompetitionMembers(ulong competitionId)
     {

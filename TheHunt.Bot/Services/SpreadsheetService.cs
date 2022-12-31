@@ -5,7 +5,7 @@ using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
 using Google.Apis.Sheets.v4.Data;
 using TheHunt.Application;
-using TheHunt.Bot.Internal;
+using TheHunt.Bot.Utils;
 using TheHunt.Domain.Models;
 
 namespace TheHunt.Bot.Services;
@@ -13,13 +13,6 @@ namespace TheHunt.Bot.Services;
 public class SpreadsheetService
 {
     private readonly SheetsService _service;
-
-    private static string[] Roles { get; } = { "Member", "🔍 Verifier" };
-
-    private const int MembersIdIndex = 0;
-    private const int MembersNameIndex = 1;
-    private const int MembersRoleIndex = 2;
-
 
     public SpreadsheetService(string googleCredentialsFile)
     {
@@ -37,24 +30,14 @@ public class SpreadsheetService
             {
                 DataFilters = new[]
                 {
-                    new DataFilter
-                    {
-                        GridRange = new GridRange { SheetId = sheet.Sheets.Members, StartRowIndex = 1, StartColumnIndex = 0, EndColumnIndex = 1 }
-                    },
-                    new DataFilter
-                    {
-                        GridRange = new GridRange { SheetId = sheet.Sheets.Members, StartRowIndex = 1, StartColumnIndex = 2, EndColumnIndex = 3 }
-                    },
+                    new DataFilter { GridRange = new GridRange { SheetId = sheet.Sheets.Members, StartRowIndex = 1, StartColumnIndex = 0, EndColumnIndex = 1 } }
                 }
             }, sheet.SpreadsheetId).ExecuteAsync();
 
-            var idColumnIdx = data.ValueRanges.IndexOf(data.ValueRanges.First(v => v.DataFilters[0].GridRange.StartColumnIndex == 0));
-            var roleColumnIdx = idColumnIdx == 0 ? 1 : 0;
-            return (IReadOnlyList<CompetitionUser>?)data.ValueRanges[idColumnIdx].ValueRange.Values?
-                       .Select((t, i) => (List: t, Idx: i)).Where(t => t.List?.Count > 0).Select((t, i) => new CompetitionUser
+            return (IReadOnlyList<CompetitionUser>?)data.ValueRanges[0].ValueRange.Values?.Select((t, i) => (List: t, Idx: i)).Where(t => t.List?.Count > 0)
+                       .Select(t => new CompetitionUser
                        {
                            UserId = ulong.Parse((string)t.List[0]), RowIdx = t.Idx,
-                           Role = (string)data.ValueRanges[roleColumnIdx].ValueRange.Values[i][0] == Roles[1] ? (byte)1 : (byte)0
                        }).ToList()
                    ?? Array.Empty<CompetitionUser>();
         }
@@ -70,7 +53,7 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
         }
     }
 
-    public async Task AddMember(SheetsRef sheet, ulong userId, string displayName, int role, string? team)
+    public async Task AddMember(SheetsRef sheet, ulong userId, string displayName, string? team)
     {
         await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
         {
@@ -80,21 +63,8 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
                 {
                     SheetUtils.StringCell(userId.ToString()),
                     SheetUtils.StringCell(displayName),
-                    SheetUtils.StringDropdownCell(Roles[role], Roles),
                     SheetUtils.StringCell(team),
                 })
-            }
-        }, sheet.SpreadsheetId).ExecuteAsync();
-    }
-
-    public async Task UpdateMemberRole(SheetsRef sheet, int rowNumber, int role)
-    {
-        await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
-        {
-            Requests = new[]
-            {
-                SheetUtils.UpdateCells(sheet.Sheets.Members, rowNumber + 1, MembersRoleIndex,
-                    SheetUtils.SingleRow(SheetUtils.StringDropdownCell(Roles[role], Roles))),
             }
         }, sheet.SpreadsheetId).ExecuteAsync();
     }
@@ -138,7 +108,8 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
                     SheetUtils.FormulaCell(imageUrl != null ? $"=HYPERLINK(\"{imageUrl}\", IMAGE(\"{imageUrl}\"))" : null),
                     SheetUtils.FormulaCell(date.ToString("=DATE(yyyy,MM,dd) + TI\\ME(HH,mm,ss)")),
                     SheetUtils.StringCell(item),
-                    SheetUtils.FormulaCell($"=IF(ISBLANK(VLOOKUP(INDIRECT(\"R[0]C6\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:D, 4, FALSE)), INDIRECT(\"R[0]C7\", FALSE), VLOOKUP(INDIRECT(\"R[0]C6\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:D, 4, FALSE))"),
+                    SheetUtils.FormulaCell(
+                        $"=IF(ISBLANK(VLOOKUP(INDIRECT(\"R[0]C6\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:D, 4, FALSE)), INDIRECT(\"R[0]C7\", FALSE), VLOOKUP(INDIRECT(\"R[0]C6\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:D, 4, FALSE))"),
                     SheetUtils.StringCell(submitterId.ToString()),
                     SheetUtils.FormulaCell($"=VLOOKUP(INDIRECT(\"R[0]C6\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:B, 2, FALSE)"),
                     SheetUtils.StringCell(verifierId.ToString()),
@@ -159,7 +130,7 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
             {
                 Requests = new[]
                 {
-                    new Request { AddSheet = CreateSheet(sheetName, "members", 4) },
+                    new Request { AddSheet = CreateSheet(sheetName, "members", 3) },
                     new Request { AddSheet = CreateSheet(sheetName, "items", 3) },
                     new Request { AddSheet = CreateSheet(sheetName, "submissions", 12) },
                 }
@@ -169,7 +140,7 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
             {
                 Requests = new[]
                 {
-                    new Request { UpdateCells = AddHeaderRow(createBatch, 0, "Id", "Name", "Role", "Team") },
+                    new Request { UpdateCells = AddHeaderRow(createBatch, 0, "Id", "Name", "Team") },
                     new Request { UpdateCells = AddHeaderRow(createBatch, 1, "Item Name", "Points Value", "Part of Set") },
                     new Request
                     {

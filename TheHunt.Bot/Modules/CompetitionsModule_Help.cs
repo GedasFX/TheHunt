@@ -32,8 +32,11 @@ Create a new channel for the competition. This is the place where participants w
 
 **NB!** Once competition is created, this channel be permanently bound to that competition.
 """)
-            .AddField("Step 5 - /competitions create", """
-In the channel you wish to create the competition, run `/competitions create SPREADSHEET_ID`. This will create the competition, bind it to the spreadsheet, and create new sheets there for use in the competition.
+            .AddField("Step 5 - Create the Verifier Role", """
+Create a new (or reuse an existing) role. Users with this role will be able to verify submissions.
+""")
+            .AddField("Step 6 - /competitions create", """
+In the channel you wish to create the competition, run `/competitions create SPREADSHEET_ID VERIFIER_ROLE`. This will create the competition, bind it to the spreadsheet, and create new sheets there for use in the competition.
 
 **NB!** You need to have `Manage Channels` permission to run this command.
 
@@ -41,7 +44,7 @@ In the channel you wish to create the competition, run `/competitions create SPR
 
 **NB!** For more information about manually editing the sheets, use `/competitions help manual-edit`.
 """)
-            .AddField("[Optional] Step 6 - /competitions show", """
+            .AddField("[Optional] Step 7 - /competitions show", """
 To see the competition information and status, use `/competitions show` in the channel the competition was created.
 """)
             .Build();

@@ -2,6 +2,7 @@
 using Discord.Interactions;
 using TheHunt.Application;
 using TheHunt.Bot.Services;
+using TheHunt.Bot.Utils;
 
 namespace TheHunt.Bot.Modules;
 
@@ -26,18 +27,22 @@ public partial class CompetitionsModule
         public async Task Invite(
             [Summary(description: "User to invite to the competition.")]
             IGuildUser user,
-            [Summary(description: "Role. Defaults to 'Member'")] [Choice("🔍 Verifier", 1), Choice("Member", 0)]
-            int role = 0)
+            [Summary(description: "Team name. If left unspecified, will not assign a team to the participant.")]
+            string? team = null)
         {
             await DeferAsync(ephemeral: true);
 
             if (await _queryService.GetCompetitionMember(Context.Channel.Id, user.Id) != null)
                 throw new EntityValidationException($"<@{user.Id}> is already part of the competition.");
 
-            await _sheet.AddMember((await _competitionsQueryService.GetSpreadsheetRef(Context.Channel.Id))!, user.Id, user.DisplayName, role, null);
+            var sheetRef = (await _competitionsQueryService.GetSpreadsheetRef(Context.Channel.Id))!;
+
+            await _sheet.AddMember(sheetRef, user.Id, user.DisplayName, team);
             _queryService.InvalidateCache(Context.Channel.Id, "members");
 
-            await FollowupAsync($"<@{user.Id}> was successfully added to the competition.", ephemeral: true);
+            await FollowupAsync($"<@{user.Id}> was successfully added to the competition.", ephemeral: true,
+                components: new ComponentBuilder().AddRow(new ActionRowBuilder()
+                    .WithSpreadsheetRefButton("Open Google Sheets", "📑", sheetRef.SpreadsheetId, sheetRef.Sheets.Members)).Build());
             await FollowupAsync($"<@{Context.User.Id}> added <@{user.Id}> to the competition.");
         }
 
@@ -49,36 +54,19 @@ public partial class CompetitionsModule
         {
             await DeferAsync(ephemeral: true);
 
-            var competitor = await _queryService.GetCompetitionMember(Context.Channel.Id, user.Id);
-            if (competitor == null)
+            var participant = await _queryService.GetCompetitionMember(Context.Channel.Id, user.Id);
+            if (participant == null)
                 throw new EntityValidationException($"<@{user.Id}> is not part of the competition.");
 
-            await _sheet.RemoveMember((await _competitionsQueryService.GetSpreadsheetRef(Context.Channel.Id))!, competitor.RowIdx);
+            var sheetRef = (await _competitionsQueryService.GetSpreadsheetRef(Context.Channel.Id))!;
+
+            await _sheet.RemoveMember(sheetRef, participant.RowIdx);
             _queryService.InvalidateCache(Context.Channel.Id, "members");
 
-            await FollowupAsync($"<@{user.Id}> was successfully removed from the competition.", ephemeral: true);
+            await FollowupAsync($"<@{user.Id}> was successfully removed from the competition.", ephemeral: true,
+                components: new ComponentBuilder().AddRow(new ActionRowBuilder()
+                    .WithSpreadsheetRefButton("Open Google Sheets", "📑", sheetRef.SpreadsheetId, sheetRef.Sheets.Members)).Build());
             await FollowupAsync($"<@{Context.User.Id}> removed <@{user.Id}> from the competition.");
-        }
-
-        [RequireUserPermission(ChannelPermission.ManageChannels)]
-        [SlashCommand("set-role", "Changes the permissions of the user.")]
-        public async Task SetRole(
-            [Summary(description: "User to remove from the competition.")]
-            IGuildUser user,
-            [Summary(description: "Role. Defaults to 'Member'")] [Choice("Verifier", 1), Choice("Member", 0)]
-            int role)
-        {
-            await DeferAsync(ephemeral: true);
-
-            var competitor = await _queryService.GetCompetitionMember(Context.Channel.Id, user.Id);
-            if (competitor == null)
-                throw new EntityValidationException($"<@{user.Id}> is not part of the competition.");
-
-            await _sheet.UpdateMemberRole((await _competitionsQueryService.GetSpreadsheetRef(Context.Channel.Id))!, competitor.RowIdx, role);
-            _queryService.InvalidateCache(Context.Channel.Id, "members");
-
-            await FollowupAsync($"<@{user.Id}> is now a {(role == 1 ? "Verifier" : "Regular participant")}.", ephemeral: true);
-            await FollowupAsync($"<@{Context.User.Id}> made <@{user.Id}> a {(role == 1 ? "Verifier" : "Regular participant")}.");
         }
     }
 }
