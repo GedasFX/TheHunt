@@ -125,7 +125,7 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
         }, spreadsheetId).ExecuteAsync();
     }
 
-    public async Task AddSubmission(SheetsRef sheetsRef, ulong submissionId, ulong submitterId, ulong verifierId, string? imageUrl,
+    public async Task AddSubmission(SheetsRef sheetsRef, ulong submissionId, string submissionUrl, ulong submitterId, ulong verifierId, string? imageUrl,
         DateTime date, string? item, int bonus)
     {
         await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
@@ -134,15 +134,16 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
             {
                 SheetUtils.AppendRow(sheetsRef.Sheets.Submissions, new[]
                 {
-                    SheetUtils.StringCell(submissionId.ToString()),
-                    SheetUtils.FormulaCell(imageUrl != null ? $"=IMAGE(\"{imageUrl}\")" : null),
+                    SheetUtils.FormulaCell($"=HYPERLINK(\"{submissionUrl}\", \"{submissionId}\")"),
+                    SheetUtils.FormulaCell(imageUrl != null ? $"=HYPERLINK(\"{imageUrl}\", IMAGE(\"{imageUrl}\"))" : null),
                     SheetUtils.FormulaCell(date.ToString("=DATE(yyyy,MM,dd) + TI\\ME(HH,mm,ss)")),
                     SheetUtils.StringCell(item),
+                    SheetUtils.FormulaCell($"=IF(ISBLANK(VLOOKUP(INDIRECT(\"R[0]C6\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:D, 4, FALSE)), INDIRECT(\"R[0]C7\", FALSE), VLOOKUP(INDIRECT(\"R[0]C6\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:D, 4, FALSE))"),
                     SheetUtils.StringCell(submitterId.ToString()),
-                    SheetUtils.FormulaCell($"=VLOOKUP(INDIRECT(\"R[0]C[-1]\", FALSE), '__{sheetsRef.SheetName}_members'!A2:B, 2, FALSE)"),
+                    SheetUtils.FormulaCell($"=VLOOKUP(INDIRECT(\"R[0]C6\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:B, 2, FALSE)"),
                     SheetUtils.StringCell(verifierId.ToString()),
-                    SheetUtils.FormulaCell($"=VLOOKUP(INDIRECT(\"R[0]C[-1]\", FALSE), '__{sheetsRef.SheetName}_members'!A2:B, 2, FALSE)"),
-                    SheetUtils.FormulaCell($"=VLOOKUP(INDIRECT(\"R[0]C[-3]\", FALSE), '__{sheetsRef.SheetName}_items'!A2:C, 2, FALSE)"),
+                    SheetUtils.FormulaCell($"=VLOOKUP(INDIRECT(\"R[0]C8\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:B, 2, FALSE)"),
+                    SheetUtils.FormulaCell($"=VLOOKUP(INDIRECT(\"R[0]C4\", FALSE), '__{sheetsRef.SheetName}_items'!A$2:C, 2, FALSE)"),
                     SheetUtils.NumberCell(bonus),
                     SheetUtils.FormulaCell("=IFNA(INDIRECT(\"R[0]C[-2]\", FALSE)) + INDIRECT(\"R[0]C[-1]\", FALSE)"),
                 })
@@ -160,7 +161,7 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
                 {
                     new Request { AddSheet = CreateSheet(sheetName, "members", 4) },
                     new Request { AddSheet = CreateSheet(sheetName, "items", 3) },
-                    new Request { AddSheet = CreateSheet(sheetName, "submissions", 11) },
+                    new Request { AddSheet = CreateSheet(sheetName, "submissions", 12) },
                 }
             }, spreadsheetId).ExecuteAsync();
 
@@ -172,8 +173,8 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
                     new Request { UpdateCells = AddHeaderRow(createBatch, 1, "Item Name", "Points Value", "Part of Set") },
                     new Request
                     {
-                        UpdateCells = AddHeaderRow(createBatch, 2, "Id", "Image", "Date", "Item", "Submitter Id", "Submitter", "Verifier Id", "Verifier",
-                            "Points Item", "Points Bonus", "Points Total")
+                        UpdateCells = AddHeaderRow(createBatch, 2, "Id", "Image", "Date", "Item", "Team", "Submitter Id", "Submitter", "Verifier Id",
+                            "Verifier", "Points Item", "Points Bonus", "Points Total")
                     }
                 }
             }, spreadsheetId).ExecuteAsync();
@@ -215,7 +216,7 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
         {
             Properties = new SheetProperties()
             {
-                Title = $"__{sheetName}_{name}", Hidden = true,
+                Title = $"__{sheetName}_{name}",
                 GridProperties = new GridProperties() { FrozenRowCount = 1, ColumnCount = columnCount },
             }
         };

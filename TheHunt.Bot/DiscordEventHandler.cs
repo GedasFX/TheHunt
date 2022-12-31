@@ -42,6 +42,8 @@ public static class DiscordEventHandler
         {
 #if DEBUG
             await interactionService.RegisterCommandsToGuildAsync(609728856211062785);
+            // await interactionService.RegisterCommandsToGuildAsync(1058517937297821707);
+
 #else
             await interactionService.RegisterCommandsGloballyAsync();
 #endif

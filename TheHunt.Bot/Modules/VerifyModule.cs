@@ -10,7 +10,7 @@ public class VerifyModule : InteractionModuleBase<SocketInteractionContext>
     private readonly SpreadsheetQueryService _spreadsheetQueryService;
     private readonly SpreadsheetService _spreadsheetService;
 
-    private IEmote VerifiedEmote { get; } = new Emoji("🤣");
+    private IEmote VerifiedEmote { get; } = new Emoji("✅");
 
     public VerifyModule(CompetitionsQueryService competitionsQueryService,
         SpreadsheetQueryService spreadsheetQueryService, SpreadsheetService spreadsheetService)
@@ -67,7 +67,7 @@ public class VerifyModule : InteractionModuleBase<SocketInteractionContext>
         var message = await Context.Channel.GetMessageAsync(channelId);
 
         var sheetsRef = await _competitionsQueryService.GetSpreadsheetRef(Context.Channel.Id);
-        await _spreadsheetService.AddSubmission(sheetsRef!, message.Id, message.Author.Id, Context.User.Id, GetAttachedImageUrl(message),
+        await _spreadsheetService.AddSubmission(sheetsRef!, message.Id, message.GetJumpUrl(), message.Author.Id, Context.User.Id, GetAttachedImageUrl(message),
             message.Timestamp.UtcDateTime, modal.Item, int.TryParse(modal.Bonus, out var bonus) ? bonus : 0);
 
         await message.AddReactionAsync(VerifiedEmote);
@@ -77,6 +77,6 @@ public class VerifyModule : InteractionModuleBase<SocketInteractionContext>
     private static string? GetAttachedImageUrl(IMessage message)
     {
         return message.Attachments.FirstOrDefault(a => a.ContentType.StartsWith("image/"))?.Url ??
-               message.Embeds.FirstOrDefault(e => e.Type == EmbedType.Image)?.Url;
+               message.Embeds.FirstOrDefault(e => e.Image != null || e.Thumbnail != null)?.Url;
     }
 }
