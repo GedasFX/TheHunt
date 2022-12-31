@@ -2,8 +2,9 @@
 using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
-using TheHunt.Bot.Services;
 using TheHunt.Bot.Utils;
+using TheHunt.Data.Services;
+using TheHunt.Sheets.Services;
 
 namespace TheHunt.Bot.Modules;
 

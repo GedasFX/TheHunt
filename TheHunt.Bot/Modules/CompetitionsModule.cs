@@ -2,8 +2,10 @@
 using Discord.Interactions;
 using Microsoft.EntityFrameworkCore;
 using TheHunt.Application;
-using TheHunt.Bot.Services;
+using TheHunt.Data;
+using TheHunt.Data.Models;
 using TheHunt.Domain;
+using TheHunt.Sheets.Services;
 
 namespace TheHunt.Bot.Modules;
 
@@ -42,7 +44,7 @@ public partial class CompetitionsModule : InteractionModuleBase<SocketInteractio
         if (await _dbContext.Competitions.AsNoTracking().AnyAsync(c => c.ChannelId == Context.Channel.Id))
             throw new EntityValidationException("This channel already has a competition. Please use a different channel to create a new competition.");
 
-        var entity = new Domain.Models.Competition
+        var entity = new Competition
         {
             ChannelId = Context.Channel.Id, VerifierRoleId = verifierRole.Id,
             Spreadsheet = await _sheet.CreateCompetition(spreadsheetId, name ?? $"#{Context.Channel.Name}")
