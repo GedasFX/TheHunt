@@ -4,4 +4,4 @@ if ($args.Count -ne 0) {
 }
 
 Set-Location "$PSScriptRoot/../"
-dotnet-ef.exe database update --project "./TheHunt.Domain/TheHunt.Domain.csproj" --startup-project "./TheHunt.Api/TheHunt.Api.csproj"
+dotnet-ef.exe database update --project "./TheHunt.Data/TheHunt.Data.csproj"

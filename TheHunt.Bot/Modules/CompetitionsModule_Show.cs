@@ -31,8 +31,7 @@ public partial class CompetitionsModule
                 return;
             }
 
-            var membersCount = await _spreadsheetQueryService.GetCompetitionMembersCount(competition.ChannelId);
-            const int submissionsCount = 0;
+            await DeferAsync(ephemeral: true);
 
             string GetVerifiers()
             {
@@ -40,11 +39,11 @@ public partial class CompetitionsModule
                 return !string.IsNullOrEmpty(v) ? v : "N/A";
             }
 
-            await RespondAsync(
+            await FollowupAsync(
                 embed: new EmbedBuilder()
                     .WithTitle(Context.Channel.Name)
                     .WithUrl(FormatUtils.GetSheetUrl(competition.Spreadsheet.SpreadsheetId, competition.Spreadsheet.Sheets.Overview))
-                    .AddField("Participants Count", membersCount, inline: true).AddField("Submissions Count", submissionsCount, inline: true)
+                    .WithFields(await _spreadsheetQueryService.GetCompetitionShowFields(competition.Spreadsheet))
                     .AddField("Verifier Role", MentionUtils.MentionRole(competition.VerifierRoleId))
                     .AddField("Verifiers", GetVerifiers())
                     .WithColor(0xA44200)
@@ -52,8 +51,8 @@ public partial class CompetitionsModule
                 components: new ComponentBuilder()
                     .AddRow(new ActionRowBuilder()
                         .WithSpreadsheetRefButton("Overview", "📖", competition.Spreadsheet.SpreadsheetId, competition.Spreadsheet.Sheets.Overview)
-                        .WithSpreadsheetRefButton("Overview", "🤝", competition.Spreadsheet.SpreadsheetId, competition.Spreadsheet.Sheets.Members)
-                        .WithSpreadsheetRefButton("Overview", "🖼️", competition.Spreadsheet.SpreadsheetId, competition.Spreadsheet.Sheets.Submissions))
+                        .WithSpreadsheetRefButton("Members", "🤝", competition.Spreadsheet.SpreadsheetId, competition.Spreadsheet.Sheets.Members)
+                        .WithSpreadsheetRefButton("Submissions", "🖼️", competition.Spreadsheet.SpreadsheetId, competition.Spreadsheet.Sheets.Submissions))
                     .Build(),
                 ephemeral: !@public);
         }

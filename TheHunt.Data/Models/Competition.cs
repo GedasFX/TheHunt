@@ -35,6 +35,9 @@ public class SheetsRef
     {
         [Column("sheet_overview")]
         public int Overview { get; set; }
+        
+        [Column("sheet_config")]
+        public int Config { get; set; }
 
         [Column("sheet_members")]
         public int Members { get; set; }

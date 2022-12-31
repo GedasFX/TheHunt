@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using Discord;
 using Google;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
@@ -131,6 +132,8 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
             {
                 Requests = new[]
                 {
+                    new Request { AddSheet = CreateSheet(sheetName, "overview", 3) },
+                    new Request { AddSheet = CreateSheet(sheetName, "config", frozenRowCount: 0) },
                     new Request { AddSheet = CreateSheet(sheetName, "members", 3) },
                     new Request { AddSheet = CreateSheet(sheetName, "items", 3) },
                     new Request { AddSheet = CreateSheet(sheetName, "submissions", 12) },
@@ -141,12 +144,102 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
             {
                 Requests = new[]
                 {
-                    new Request { UpdateCells = AddHeaderRow(createBatch, 0, "Id", "Name", "Team") },
-                    new Request { UpdateCells = AddHeaderRow(createBatch, 1, "Item Name", "Points Value", "Part of Set") },
+                    new Request { UpdateCells = AddHeaderRow(createBatch, 2, "Id", "Name", "Team") },
+                    new Request { UpdateCells = AddHeaderRow(createBatch, 3, "Item Name", "Points Value", "Part of Set") },
                     new Request
                     {
-                        UpdateCells = AddHeaderRow(createBatch, 2, "Id", "Image", "Date", "Item", "Team", "Submitter Id", "Submitter", "Verifier Id",
+                        UpdateCells = AddHeaderRow(createBatch, 4, "Id", "Image", "Date", "Item", "Team", "Submitter Id", "Submitter", "Verifier Id",
                             "Verifier", "Points Item", "Points Bonus", "Points Total")
+                    },
+                    new Request()
+                    {
+                        UpdateCells = new UpdateCellsRequest()
+                        {
+                            Start = new GridCoordinate() { SheetId = createBatch.Replies[1].AddSheet.Properties.SheetId, RowIndex = 0, ColumnIndex = 0 },
+                            Fields = "*",
+                            Rows = new[]
+                            {
+                                new RowData()
+                                {
+                                    Values = new[]
+                                    {
+                                        new CellData()
+                                        {
+                                            UserEnteredFormat = new CellFormat() { TextFormat = new TextFormat() { Bold = true } },
+                                            UserEnteredValue = new ExtendedValue { StringValue = "/competitions show" }
+                                        }
+                                    }
+                                },
+                                new RowData()
+                                {
+                                    Values = new[]
+                                    {
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue
+                                            {
+                                                StringValue =
+                                                    "(Up to) 20 rows in the table below can be configured to show data when users run /competitions show."
+                                            }
+                                        }
+                                    }
+                                },
+                                new RowData()
+                                {
+                                    Values = new[]
+                                    {
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue
+                                            {
+                                                StringValue =
+                                                    "Feel free to edit the provided examples. They are here to show potential ways of using this section."
+                                            }
+                                        }
+                                    }
+                                },
+                                new RowData(),
+                                new RowData()
+                                {
+                                    Values = new[]
+                                    {
+                                        new CellData()
+                                        {
+                                            UserEnteredFormat = new CellFormat() { TextFormat = new TextFormat() { Bold = true } },
+                                            UserEnteredValue = new ExtendedValue { StringValue = "Section Title" }
+                                        },
+                                        new CellData()
+                                        {
+                                            UserEnteredFormat = new CellFormat() { TextFormat = new TextFormat() { Bold = true } },
+                                            UserEnteredValue = new ExtendedValue { StringValue = "Value" }
+                                        },
+                                        new CellData()
+                                        {
+                                            UserEnteredFormat = new CellFormat() { TextFormat = new TextFormat() { Bold = true } },
+                                            UserEnteredValue = new ExtendedValue { StringValue = "Use Short Form?" }
+                                        }
+                                    }
+                                },
+                                new RowData()
+                                {
+                                    Values = new[]
+                                    {
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue { StringValue = "Participants Count" }
+                                        },
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue { FormulaValue = $"=COUNTA('__{sheetName}_members'!A2:A)" }
+                                        },
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue { BoolValue = true }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }, spreadsheetId).ExecuteAsync();
@@ -156,9 +249,11 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
                 SpreadsheetId = spreadsheetId, SheetName = sheetName,
                 Sheets = new SheetsRef.Sheet()
                 {
-                    Members = (int)createBatch.Replies[0].AddSheet.Properties.SheetId!,
-                    Items = (int)createBatch.Replies[1].AddSheet.Properties.SheetId!,
-                    Submissions = (int)createBatch.Replies[2].AddSheet.Properties.SheetId!,
+                    Overview = (int)createBatch.Replies[0].AddSheet.Properties.SheetId!,
+                    Config = (int)createBatch.Replies[1].AddSheet.Properties.SheetId!,
+                    Members = (int)createBatch.Replies[2].AddSheet.Properties.SheetId!,
+                    Items = (int)createBatch.Replies[3].AddSheet.Properties.SheetId!,
+                    Submissions = (int)createBatch.Replies[4].AddSheet.Properties.SheetId!,
                 },
             };
         }
@@ -182,14 +277,53 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
         };
     }
 
-    private static AddSheetRequest CreateSheet(string sheetName, string name, int columnCount)
+    public async Task<IReadOnlyList<EmbedFieldBuilder>> GetCompetitionShowFields(SheetsRef sheet)
+    {
+        try
+        {
+            var data = await _service.Spreadsheets.Values.BatchGetByDataFilter(new BatchGetValuesByDataFilterRequest()
+            {
+                DataFilters = new[]
+                {
+                    new DataFilter
+                    {
+                        GridRange = new GridRange
+                        {
+                            SheetId = sheet.Sheets.Config,
+                            StartRowIndex = 5, EndRowIndex = 25,
+                            StartColumnIndex = 0, EndColumnIndex = 3
+                        }
+                    }
+                }
+            }, sheet.SpreadsheetId).ExecuteAsync();
+
+            return (IReadOnlyList<EmbedFieldBuilder>?)data.ValueRanges[0].ValueRange.Values?.Where(t => t?.Count > 0)
+                       .Select(t => new EmbedFieldBuilder()
+                       {
+                           Name = t.ElementAtOrDefault(0) as string,
+                           Value = t.ElementAtOrDefault(1) as string,
+                           IsInline = !bool.TryParse(t.ElementAtOrDefault(2) as string, out var inline) || inline,
+                       }).ToList()
+                   ?? Array.Empty<EmbedFieldBuilder>();
+        }
+        catch (Exception e)
+        {
+            throw new EntityValidationException("""
+Configuration sheet is malformed. This is generally caused by manual edits. To resolve issues, make sure:
+  1. Section Title is not empty and no more than 256 characters long.
+  2. Value is not empty and no more than 1024 characters in length.
+""", e);
+        }
+    }
+
+    private static AddSheetRequest CreateSheet(string sheetName, string name, int? columnCount = null, int? frozenRowCount = 1)
     {
         return new AddSheetRequest()
         {
             Properties = new SheetProperties()
             {
                 Title = $"__{sheetName}_{name}",
-                GridProperties = new GridProperties() { FrozenRowCount = 1, ColumnCount = columnCount },
+                GridProperties = new GridProperties() { FrozenRowCount = frozenRowCount, ColumnCount = columnCount },
             }
         };
     }

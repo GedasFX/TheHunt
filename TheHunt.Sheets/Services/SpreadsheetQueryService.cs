@@ -1,7 +1,9 @@
 ﻿using System.Text.Json;
+using Discord;
 using NReJSON;
 using StackExchange.Redis;
 using TheHunt.Application;
+using TheHunt.Data.Models;
 using TheHunt.Data.Services;
 using TheHunt.Sheets.Models;
 
@@ -53,6 +55,11 @@ public class SpreadsheetQueryService
 
         return (await GetCompetitionMembers(competitionId)).Count;
     }
+    
+    public async Task<IReadOnlyList<EmbedFieldBuilder>> GetCompetitionShowFields(SheetsRef sheet)
+    {
+        return await _spreadsheetService.GetCompetitionShowFields(sheet);
+    }
 
     public void InvalidateCache(ulong competitionId, string cache)
     {
@@ -81,10 +88,7 @@ public class SpreadsheetQueryService
     {
         public TResult? Deserialize<TResult>(RedisResult serializedValue)
         {
-            if (serializedValue.IsNull)
-                return default;
-
-            return JsonSerializer.Deserialize<TResult>((string)serializedValue!);
+            return !serializedValue.IsNull ? JsonSerializer.Deserialize<TResult>((string)serializedValue!) : default;
         }
 
         public string Serialize<TObjectType>(TObjectType obj)
