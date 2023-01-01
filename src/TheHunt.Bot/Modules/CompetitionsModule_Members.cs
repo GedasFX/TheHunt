@@ -1,7 +1,7 @@
 ﻿using Discord;
 using Discord.Interactions;
-using TheHunt.Application;
 using TheHunt.Bot.Utils;
+using TheHunt.Core.Exceptions;
 using TheHunt.Data.Services;
 using TheHunt.Sheets.Services;
 

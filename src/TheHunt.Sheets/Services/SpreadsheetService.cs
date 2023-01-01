@@ -5,7 +5,7 @@ using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
 using Google.Apis.Sheets.v4.Data;
-using TheHunt.Application;
+using TheHunt.Core.Exceptions;
 using TheHunt.Data.Models;
 using TheHunt.Sheets.Models;
 using TheHunt.Sheets.Utils;

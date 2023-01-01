@@ -1,7 +1,6 @@
-﻿using System;
-using System.Runtime.Serialization;
+﻿using System.Runtime.Serialization;
 
-namespace TheHunt.Application;
+namespace TheHunt.Core.Exceptions;
 
 [Serializable]
 public class EntityValidationException : Exception

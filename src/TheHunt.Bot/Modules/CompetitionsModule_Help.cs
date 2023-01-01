@@ -52,7 +52,7 @@ To see the competition information and status, use `/competitions show` in the c
         [SlashCommand("create", "Instructions on how to create a competition.")]
         public async Task HelpCreate()
         {
-            await RespondAsync(embed: HelpVerifyEmbed, ephemeral: true);
+            await RespondAsync(embed: HelpCreateEmbed, ephemeral: true);
         }
 
         private static Embed HelpVerifyEmbed { get; } = new EmbedBuilder()
@@ -60,14 +60,14 @@ To see the competition information and status, use `/competitions show` in the c
             .WithImageUrl("https://cdn.discordapp.com/attachments/1059186725034934303/1059186752910262362/image.png")
             .AddField("Prerequisites", """
 1. Post must be in the submissions channel. To see if channel is bound to a competition run `/competitions show`.
-2. The person verifying submission must be in the verifiers role. This role can be seen on the `/competitions show` as well.
+2. The person verifying submissions must be in the verifiers role. This role can be seen on the `/competitions show` as well.
 """)
             .AddField("Verify Submission - Part 1", """
-Right-click the message (see image) and click `Apps -> Verify Submission`. This will open a submission modal where you can provide additional details.
+Right-click the message (see image) and click `Apps -> Verify Submission`. This will open a dialog window where you can provide additional details.
 """)
             .AddField("Verify Submission - Part 2", """
 After you start verification process, you will be greeted with 2 input fields - item and bonus points.
-1. Item field takes an item name, which would cross-reference the pre-populated items database and would give the appropriate amount of points.
+1. Item field takes an item name, which would cross-reference the pre-populated items sheet and would give the appropriate amount of points.
 2. Bonus Points are for cases where submission deserves additional rewards (or penalty). This number can be either positive or negative.
 """)
             .AddField("Help! I made a mistake!", """

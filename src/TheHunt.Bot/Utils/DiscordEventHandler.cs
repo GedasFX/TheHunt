@@ -4,7 +4,7 @@ using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using TheHunt.Application;
+using TheHunt.Core.Exceptions;
 using TheHunt.Data;
 using TheHunt.Data.Models;
 

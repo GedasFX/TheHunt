@@ -2,7 +2,7 @@
 using Discord;
 using NReJSON;
 using StackExchange.Redis;
-using TheHunt.Application;
+using TheHunt.Core.Exceptions;
 using TheHunt.Data.Models;
 using TheHunt.Data.Services;
 using TheHunt.Sheets.Models;

@@ -1,7 +1,7 @@
 ﻿using Discord;
 using Discord.Interactions;
 using Microsoft.EntityFrameworkCore;
-using TheHunt.Application;
+using TheHunt.Core.Exceptions;
 using TheHunt.Data;
 using TheHunt.Data.Models;
 using TheHunt.Sheets.Services;
