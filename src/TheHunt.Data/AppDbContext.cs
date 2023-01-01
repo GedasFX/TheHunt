@@ -15,6 +15,8 @@ public class AppDbContext : DbContext
 
     public static async Task Initialize(IServiceProvider serviceProvider)
     {
+        Directory.CreateDirectory("data");
+
         using var scope = serviceProvider.CreateScope();
         var dbContext = serviceProvider.GetRequiredService<AppDbContext>();
 

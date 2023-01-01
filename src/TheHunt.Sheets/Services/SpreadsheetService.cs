@@ -111,7 +111,7 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
                     SheetUtils.FormulaCell(date.ToString("=DATE(yyyy,MM,dd) + TI\\ME(HH,mm,ss)")),
                     SheetUtils.StringCell(item),
                     SheetUtils.FormulaCell(
-                        $"=IF(ISBLANK(VLOOKUP(INDIRECT(\"R[0]C6\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:D, 4, FALSE)), INDIRECT(\"R[0]C7\", FALSE), VLOOKUP(INDIRECT(\"R[0]C6\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:D, 4, FALSE))"),
+                        $"=IF(ISBLANK(VLOOKUP(INDIRECT(\"R[0]C6\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:D, 3, FALSE)), INDIRECT(\"R[0]C7\", FALSE), VLOOKUP(INDIRECT(\"R[0]C6\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:D, 3, FALSE))"),
                     SheetUtils.StringCell(submitterId.ToString()),
                     SheetUtils.FormulaCell($"=VLOOKUP(INDIRECT(\"R[0]C6\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:B, 2, FALSE)"),
                     SheetUtils.StringCell(verifierId.ToString()),
@@ -132,7 +132,7 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
             {
                 Requests = new[]
                 {
-                    new Request { AddSheet = CreateSheet(sheetName, "overview", 3) },
+                    new Request { AddSheet = CreateSheet(sheetName, "overview", frozenRowCount: 0) },
                     new Request { AddSheet = CreateSheet(sheetName, "config", frozenRowCount: 0) },
                     new Request { AddSheet = CreateSheet(sheetName, "members", 3) },
                     new Request { AddSheet = CreateSheet(sheetName, "items", 3) },
@@ -237,7 +237,226 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
                                             UserEnteredValue = new ExtendedValue { BoolValue = true }
                                         }
                                     }
-                                }
+                                },
+                                new RowData()
+                                {
+                                    Values = new[]
+                                    {
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue { StringValue = "Submissions Count" }
+                                        },
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue { FormulaValue = $"=COUNTA('__{sheetName}_submissions'!A2:A)" }
+                                        },
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue { BoolValue = true }
+                                        }
+                                    }
+                                },
+                                new RowData()
+                                {
+                                    Values = new[]
+                                    {
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue { StringValue = "Best Participants (Submissions)" }
+                                        },
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue
+                                            {
+                                                FormulaValue =
+                                                    "=IF(NOT(ISBLANK(I8)), \"🥇 `\" & TEXT(J8, \"000\") & \"` <@\" & I8 & \">\", \"N/A\") &" +
+                                                    " IF(NOT(ISBLANK(I9)), \"\n🥈 `\" & TEXT(J9, \"000\") & \"` <@\" & I9 & \">\", \"\") &" +
+                                                    " IF(NOT(ISBLANK(I10)), \"\n🥉 `\" & TEXT(J10, \"000\") & \"` <@\" & I10 & \">\", \"\")"
+                                            }
+                                        },
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue { BoolValue = false }
+                                        }
+                                    }
+                                },
+                                new RowData()
+                                {
+                                    Values = new[]
+                                    {
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue { StringValue = "Best Participants (Points)" }
+                                        },
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue
+                                            {
+                                                FormulaValue =
+                                                    "=IF(NOT(ISBLANK(G8)), \"🥇 `\" & TEXT(H8, \"000\") & \"` <@\" & G8 & \">\", \"N/A\") &" +
+                                                    " IF(NOT(ISBLANK(G9)), \"\n🥈 `\" & TEXT(H9, \"000\") & \"` <@\" & G9 & \">\", \"\") &" +
+                                                    " IF(NOT(ISBLANK(G10)), \"\n🥉 `\" & TEXT(H10, \"000\") & \"` <@\" & G10 & \">\", \"\")"
+                                            }
+                                        },
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue { BoolValue = false }
+                                        }
+                                    }
+                                },
+                                new RowData()
+                                {
+                                    Values = new[]
+                                    {
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue { StringValue = "Best Teams (Submissions)" }
+                                        },
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue
+                                            {
+                                                FormulaValue =
+                                                    "=IF(NOT(ISBLANK(K8)), \"🥇 `\" & TEXT(L8, \"000\") & \"` \" & K8, \"N/A\") &" +
+                                                    " IF(NOT(ISBLANK(K9)), \"\n🥈 `\" & TEXT(L9, \"000\") & \"` \" & K9, \"\") &" +
+                                                    " IF(NOT(ISBLANK(K10)), \"\n🥉 `\" & TEXT(L10, \"000\") & \"` \" & K10, \"\")"
+                                            }
+                                        },
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue { BoolValue = false }
+                                        }
+                                    }
+                                },
+                                new RowData()
+                                {
+                                    Values = new[]
+                                    {
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue { StringValue = "Best Teams (Points)" }
+                                        },
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue
+                                            {
+                                                FormulaValue =
+                                                    "=IF(NOT(ISBLANK(M8)), \"🥇 `\" & TEXT(N8, \"000\") & \"` \" & M8, \"N/A\") &" +
+                                                    " IF(NOT(ISBLANK(M9)), \"\n🥈 `\" & TEXT(N9, \"000\") & \"` \" & M9, \"\") &" +
+                                                    " IF(NOT(ISBLANK(M10)), \"\n🥉 `\" & TEXT(N10, \"000\") & \"` \" & M10, \"\")"
+                                            }
+                                        },
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue { BoolValue = false }
+                                        }
+                                    }
+                                },
+                                new RowData()
+                                {
+                                    Values = new[]
+                                    {
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue { StringValue = "Best Verifiers" }
+                                        },
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue
+                                            {
+                                                FormulaValue =
+                                                    "=IF(NOT(ISBLANK(E8)), \"🥇 `\" & TEXT(F8, \"000\") & \"` <@\" & E8 & \">\", \"N/A\") &" +
+                                                    " IF(NOT(ISBLANK(E9)), \"\n🥈 `\" & TEXT(F9, \"000\") & \"` <@\" & E9 & \">\", \"\") &" +
+                                                    " IF(NOT(ISBLANK(E10)), \"\n🥉 `\" & TEXT(F10, \"000\") & \"` <@\" & E10 & \">\", \"\")"
+                                            }
+                                        },
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue { BoolValue = false }
+                                        }
+                                    }
+                                },
+                            }
+                        }
+                    },
+                    new Request()
+                    {
+                        UpdateCells = new UpdateCellsRequest()
+                        {
+                            Start = new GridCoordinate() { SheetId = createBatch.Replies[1].AddSheet.Properties.SheetId, RowIndex = 4, ColumnIndex = 4 },
+                            Fields = "*",
+                            Rows = new[]
+                            {
+                                new RowData()
+                                {
+                                    Values = new[]
+                                    {
+                                        new CellData()
+                                        {
+                                            UserEnteredFormat = new CellFormat() { TextFormat = new TextFormat() { Bold = true } },
+                                            UserEnteredValue = new ExtendedValue { StringValue = "Playground" }
+                                        },
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue
+                                            {
+                                                StringValue =
+                                                    "Everything to the right of the table (A5:C25), can be used as a playground for intermediate values."
+                                            }
+                                        }
+                                    }
+                                },
+                                new RowData(),
+                                new RowData()
+                                {
+                                    Values = new[]
+                                    {
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue
+                                            {
+                                                FormulaValue =
+                                                    $"=QUERY('__{sheetName}_submissions'!A1:L13, \"SELECT H, COUNT(A) GROUP BY H ORDER BY COUNT(A) DESC LIMIT 3\", 1)"
+                                            }
+                                        },
+                                        new CellData(),
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue
+                                            {
+                                                FormulaValue =
+                                                    $"=QUERY('__{sheetName}_submissions'!A1:L13, \"SELECT F, SUM(L) GROUP BY F ORDER BY SUM(L) DESC LIMIT 3\", 1)"
+                                            }
+                                        },
+                                        new CellData(),
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue
+                                            {
+                                                FormulaValue =
+                                                    $"=QUERY('__{sheetName}_submissions'!A1:L13, \"SELECT F, COUNT(A) GROUP BY F ORDER BY COUNT(A) DESC LIMIT 3\", 1)"
+                                            }
+                                        },
+                                        new CellData(),
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue
+                                            {
+                                                FormulaValue =
+                                                    $"=QUERY('__{sheetName}_submissions'!A1:L13, \"SELECT E, COUNT(A) GROUP BY E ORDER BY COUNT(A) DESC LIMIT 3\", 1)"
+                                            }
+                                        },
+                                        new CellData(),
+                                        new CellData()
+                                        {
+                                            UserEnteredValue = new ExtendedValue
+                                            {
+                                                FormulaValue =
+                                                    $"=QUERY('__{sheetName}_submissions'!A1:L13, \"SELECT E, SUM(L) GROUP BY E ORDER BY SUM(L) DESC LIMIT 3\", 1)"
+                                            }
+                                        },
+                                    }
+                                },
                             }
                         }
                     }
