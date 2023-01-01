@@ -8,7 +8,7 @@ using TheHunt.Sheets.Services;
 
 namespace TheHunt.Bot.Modules;
 
-[Group("competitions", "Tools to manage competitions.")]
+[Group("the-hunt", "Tools to manage competitions.")]
 public partial class CompetitionsModule : InteractionModuleBase<SocketInteractionContext>
 {
     private readonly AppDbContext _dbContext;
