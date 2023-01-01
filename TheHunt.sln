@@ -1,12 +1,12 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TheHunt.Data", "TheHunt.Data\TheHunt.Data.csproj", "{2EC2FE9D-53C4-4EB7-8AC4-76F0CC8CBCE9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TheHunt.Data", "src\TheHunt.Data\TheHunt.Data.csproj", "{2EC2FE9D-53C4-4EB7-8AC4-76F0CC8CBCE9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TheHunt.Bot", "TheHunt.Bot\TheHunt.Bot.csproj", "{DDCE60B0-B5BD-4B82-A7A2-691C7A029410}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TheHunt.Bot", "src\TheHunt.Bot\TheHunt.Bot.csproj", "{DDCE60B0-B5BD-4B82-A7A2-691C7A029410}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TheHunt.Core", "TheHunt.Core\TheHunt.Core.csproj", "{82074450-70C5-4733-90EA-0A68CDD1DA38}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TheHunt.Core", "src\TheHunt.Core\TheHunt.Core.csproj", "{82074450-70C5-4733-90EA-0A68CDD1DA38}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TheHunt.Sheets", "TheHunt.Sheets\TheHunt.Sheets.csproj", "{7C74239F-95E6-4C31-9D0E-8835E83A96D2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TheHunt.Sheets", "src\TheHunt.Sheets\TheHunt.Sheets.csproj", "{7C74239F-95E6-4C31-9D0E-8835E83A96D2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

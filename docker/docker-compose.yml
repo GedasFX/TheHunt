@@ -1,22 +1,14 @@
 version: '3'
 
 services:
-
-  db:
-    image: postgres:15-alpine
-    ports:
-      - "5432:5432"
+  app:
+    image: gedasfx/thehunt:0.1.0
     restart: always
     environment:
       POSTGRES_PASSWORD: example
       
   redis:
     image: redislabs/rejson:latest
+    restart: always
     ports:
       - "6379:6379"
-
-  # adminer:
-  #   image: adminer
-  #   restart: always
-  #   ports:
-  #     - 8080:8080
