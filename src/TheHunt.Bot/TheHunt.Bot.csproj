@@ -6,7 +6,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <UserSecretsId>3a80a3ec-07d5-47f6-a130-5d298dd23715</UserSecretsId>
-        <ContainerImageTag>0;0.3;0.3.0;latest</ContainerImageTag>
+        <ContainerImageTags>0;0.3;0.3.0;latest</ContainerImageTags>
     </PropertyGroup>
 
     <ItemGroup>
