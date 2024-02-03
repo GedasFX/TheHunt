@@ -18,5 +18,11 @@ jobs:
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: 8.0.x
-    - name: Build
-      run: dotnet build
+    - name: dotnet: publish
+      run: dotnet publish --os linux --arch x64 /t:PublishContainer -c Release
+    # - name: docker: push
+    #   uses: docker/build-push-action@v5.1.0
+    # - name: Push docker image to DockerHub
+    #   run: |
+    #     docker load < result
+    #     docker push owner/repo:tag
