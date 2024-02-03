@@ -47,6 +47,9 @@ public partial class CompetitionsModule
                     .AddField("Verifier Role",
                         "The role user must be part of to be able to verify submissions.\n" +
                         $"\\> {MentionUtils.MentionRole(competition.VerifierRoleId)}")
+                    .AddField("Restrict Items",
+                        "When enabled, only items from __xyz_items, will be allowed to be verified.\n" +
+                        $"\\> {(competition.Features.ItemsRestricted ? "Enabled" : "Disabled")}")
                     .WithColor(0xA44200)
                     .Build(),
                 ephemeral: true);

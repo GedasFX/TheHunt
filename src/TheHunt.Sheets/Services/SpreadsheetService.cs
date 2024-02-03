@@ -19,102 +19,7 @@ public class SpreadsheetService(string googleCredentialsFile)
         HttpClientInitializer = GoogleCredential.FromFile(googleCredentialsFile)
     });
 
-    public async Task<IReadOnlyList<CompetitionUser>> GetMembers(SheetsRef sheet)
-    {
-        try
-        {
-            var data = await _service.Spreadsheets.Values.BatchGetByDataFilter(new BatchGetValuesByDataFilterRequest()
-            {
-                DataFilters = new[]
-                {
-                    new DataFilter { GridRange = new GridRange { SheetId = sheet.Sheets.Members, StartRowIndex = 1, StartColumnIndex = 0, EndColumnIndex = 1 } }
-                }
-            }, sheet.SpreadsheetId).ExecuteAsync();
-
-            return data.ValueRanges[0].ValueRange.Values?
-                       .Select((t, i) => (List: t, Idx: i)).Where(t => t.List?.Count > 0)
-                       .Select(t => new CompetitionUser
-                       {
-                           UserId = ulong.Parse((string)t.List[0]), RowIdx = t.Idx,
-                       }).AsReadOnlyList()
-                   ?? Array.Empty<CompetitionUser>();
-        }
-        catch (Exception e)
-        {
-            throw new EntityValidationException(
-                "Members sheet is malformed. Make sure first column consists of only user ids, and you do not have any duplicate entries.",
-                e);
-        }
-    }
-
-    public async Task AddMember(SheetsRef sheet, ulong userId, string displayName, string? team)
-    {
-        await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
-        {
-            Requests = new[]
-            {
-                SheetUtils.AppendRow(sheet.Sheets.Members, new[]
-                {
-                    SheetUtils.StringCell(userId.ToString()),
-                    SheetUtils.StringCell(displayName),
-                    SheetUtils.StringCell(team),
-                })
-            }
-        }, sheet.SpreadsheetId).ExecuteAsync();
-    }
-
-    public async Task RemoveMember(SheetsRef sheet, int rowNumber)
-    {
-        await RemoveRow(sheet.SpreadsheetId, sheet.Sheets.Members, rowNumber);
-    }
-
-    public async Task RemoveRow(string spreadsheetId, int sheetId, int rowNumber)
-    {
-        await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
-        {
-            Requests = new[]
-            {
-                new Request()
-                {
-                    DeleteDimension = new DeleteDimensionRequest()
-                    {
-                        Range = new DimensionRange()
-                        {
-                            Dimension = "ROWS", SheetId = sheetId,
-                            StartIndex = rowNumber + 1, EndIndex = rowNumber + 2,
-                        }
-                    }
-                }
-            }
-        }, spreadsheetId).ExecuteAsync();
-    }
-
-    public async Task AddSubmission(SheetsRef sheetsRef, ulong submissionId, string submissionUrl, ulong submitterId, ulong verifierId, string? imageUrl,
-        DateTime date, string? item, int bonus)
-    {
-        await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
-        {
-            Requests = new[]
-            {
-                SheetUtils.AppendRow(sheetsRef.Sheets.Submissions, new[]
-                {
-                    SheetUtils.FormulaCell($"=HYPERLINK(\"{submissionUrl}\", \"{submissionId}\")"),
-                    SheetUtils.FormulaCell(imageUrl != null ? $"=HYPERLINK(\"{imageUrl}\", IMAGE(\"{imageUrl}\"))" : null),
-                    SheetUtils.FormulaCell(date.ToString("=DATE(yyyy,MM,dd) + TI\\ME(HH,mm,ss)")),
-                    SheetUtils.StringCell(item),
-                    SheetUtils.FormulaCell(
-                        $"=IF(ISBLANK(VLOOKUP(INDIRECT(\"R[0]C6\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:D, 3, FALSE)), INDIRECT(\"R[0]C7\", FALSE), VLOOKUP(INDIRECT(\"R[0]C6\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:D, 3, FALSE))"),
-                    SheetUtils.StringCell(submitterId.ToString()),
-                    SheetUtils.FormulaCell($"=VLOOKUP(INDIRECT(\"R[0]C6\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:B, 2, FALSE)"),
-                    SheetUtils.StringCell(verifierId.ToString()),
-                    SheetUtils.FormulaCell($"=VLOOKUP(INDIRECT(\"R[0]C8\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:B, 2, FALSE)"),
-                    SheetUtils.FormulaCell($"=VLOOKUP(INDIRECT(\"R[0]C4\", FALSE), '__{sheetsRef.SheetName}_items'!A$2:C, 2, FALSE)"),
-                    SheetUtils.NumberCell(bonus),
-                    SheetUtils.FormulaCell("=IFNA(INDIRECT(\"R[0]C[-2]\", FALSE)) + INDIRECT(\"R[0]C[-1]\", FALSE)"),
-                })
-            }
-        }, sheetsRef.SpreadsheetId).ExecuteAsync();
-    }
+     #region General
 
     public async Task<SheetsRef> CreateCompetition(string spreadsheetId, string sheetName)
     {
@@ -158,11 +63,16 @@ public class SpreadsheetService(string googleCredentialsFile)
                 },
             };
         }
-        catch (GoogleApiException e) when (e is { HttpStatusCode: HttpStatusCode.Forbidden, Error.Message: "The caller does not have permission" })
+        catch (GoogleApiException e) when (e is
+                                           {
+                                               HttpStatusCode: HttpStatusCode.Forbidden,
+                                               Error.Message: "The caller does not have permission"
+                                           })
         {
             throw new EntityValidationException(
                 "The bot does not have permission to edit this spreadsheet.\n" +
-                "Send an invitation to `the-hunt@the-hunt-373015.iam.gserviceaccount.com` with `Editor` permissions.", e);
+                "Send an invitation to `the-hunt@the-hunt-373015.iam.gserviceaccount.com` with `Editor` permissions.",
+                e);
         }
         catch (GoogleApiException e) when (e is { HttpStatusCode: HttpStatusCode.BadRequest })
         {
@@ -172,11 +82,198 @@ public class SpreadsheetService(string googleCredentialsFile)
         }
     }
 
-    private static UpdateCellsRequest AddHeaderRow(BatchUpdateSpreadsheetResponse createBatch, int index, params string[] header)
+    #endregion
+    
+    #region Members
+
+    public async Task<IReadOnlyList<CompetitionUser>> GetMembers(SheetsRef sheet)
+    {
+        try
+        {
+            var data = await _service.Spreadsheets.Values.BatchGetByDataFilter(new BatchGetValuesByDataFilterRequest()
+            {
+                DataFilters = new[]
+                {
+                    new DataFilter
+                    {
+                        GridRange = new GridRange
+                        {
+                            SheetId = sheet.Sheets.Members, StartRowIndex = 1, StartColumnIndex = 0, EndColumnIndex = 1
+                        }
+                    }
+                }
+            }, sheet.SpreadsheetId).ExecuteAsync();
+
+            return data.ValueRanges[0].ValueRange.Values?
+                       .Select((t, i) => (List: t, Idx: i)).Where(t => t.List?.Count > 0)
+                       .Select(t => new CompetitionUser
+                       {
+                           UserId = ulong.Parse((string)t.List[0]), RowIdx = t.Idx,
+                       }).AsReadOnlyList()
+                   ?? Array.Empty<CompetitionUser>();
+        }
+        catch (Exception e)
+        {
+            throw new EntityValidationException(
+                "Members sheet is malformed. Make sure first column consists of only user ids, and you do not have any duplicate entries.",
+                e);
+        }
+    }
+
+    public async Task AddMember(SheetsRef sheet, ulong userId, string displayName, string? team)
+    {
+        await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
+        {
+            Requests = new[]
+            {
+                SheetUtils.AppendRow(sheet.Sheets.Members, new[]
+                {
+                    SheetUtils.StringCell(userId.ToString()),
+                    SheetUtils.StringCell(displayName),
+                    SheetUtils.StringCell(team),
+                })
+            }
+        }, sheet.SpreadsheetId).ExecuteAsync();
+    }
+
+    public async Task RemoveMember(SheetsRef sheet, int rowNumber)
+    {
+        await RemoveRow(sheet.SpreadsheetId, sheet.Sheets.Members, rowNumber);
+    }
+
+    #endregion
+
+    #region Items
+
+    public async Task<IReadOnlyList<CompetitionItem>> GetItems(SheetsRef sheet)
+    {
+        try
+        {
+            var data = await _service.Spreadsheets.Values.BatchGetByDataFilter(new BatchGetValuesByDataFilterRequest()
+            {
+                DataFilters = new[]
+                {
+                    new DataFilter
+                    {
+                        GridRange = new GridRange
+                        {
+                            SheetId = sheet.Sheets.Items, StartRowIndex = 1, StartColumnIndex = 0, EndColumnIndex = 1
+                        }
+                    }
+                }
+            }, sheet.SpreadsheetId).ExecuteAsync();
+
+            return data.ValueRanges[0].ValueRange.Values?
+                       .Select((t, i) => (List: t, Idx: i))
+                       .Where(t => t.List?.Count > 0)
+                       .Select(t => (Name: t.List[0] as string, t.Idx))
+                       .Where(t => !string.IsNullOrEmpty(t.Name))
+                       .Select(t => new CompetitionItem
+                       {
+                           Name = t.Name!, RowIdx = t.Idx,
+                       }).AsReadOnlyList()
+                   ?? Array.Empty<CompetitionItem>();
+        }
+        catch (Exception e)
+        {
+            throw new EntityValidationException(
+                "Items sheet is malformed. Make sure first column consists of only item names, and you do not have any duplicate entries.",
+                e);
+        }
+    }
+
+    public async Task AddItem(SheetsRef sheetsRef, string name, int pointsValue = 0)
+    {
+        await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
+        {
+            Requests = new[]
+            {
+                SheetUtils.AppendRow(sheetsRef.Sheets.Items, new[]
+                {
+                    SheetUtils.StringCell(name),
+                    SheetUtils.NumberCell(pointsValue),
+                })
+            }
+        }, sheetsRef.SpreadsheetId).ExecuteAsync();
+    }
+    
+    public async Task RemoveItem(SheetsRef sheet, int rowNumber)
+    {
+        await RemoveRow(sheet.SpreadsheetId, sheet.Sheets.Items, rowNumber);
+    }
+
+    #endregion
+
+    #region Submissions
+
+    public async Task AddSubmission(SheetsRef sheetsRef, ulong submissionId, string submissionUrl, ulong submitterId,
+        ulong verifierId, string? imageUrl,
+        DateTime date, string? item, int bonus)
+    {
+        await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
+        {
+            Requests = new[]
+            {
+                SheetUtils.AppendRow(sheetsRef.Sheets.Submissions, new[]
+                {
+                    SheetUtils.FormulaCell($"=HYPERLINK(\"{submissionUrl}\", \"{submissionId}\")"),
+                    SheetUtils.FormulaCell(imageUrl != null
+                        ? $"=HYPERLINK(\"{imageUrl}\", IMAGE(\"{imageUrl}\"))"
+                        : null),
+                    SheetUtils.FormulaCell(date.ToString("=DATE(yyyy,MM,dd) + TI\\ME(HH,mm,ss)")),
+                    SheetUtils.StringCell(item),
+                    SheetUtils.FormulaCell(
+                        $"=IF(ISBLANK(VLOOKUP(INDIRECT(\"R[0]C6\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:D, 3, FALSE)), INDIRECT(\"R[0]C7\", FALSE), VLOOKUP(INDIRECT(\"R[0]C6\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:D, 3, FALSE))"),
+                    SheetUtils.StringCell(submitterId.ToString()),
+                    SheetUtils.FormulaCell(
+                        $"=VLOOKUP(INDIRECT(\"R[0]C6\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:B, 2, FALSE)"),
+                    SheetUtils.StringCell(verifierId.ToString()),
+                    SheetUtils.FormulaCell(
+                        $"=VLOOKUP(INDIRECT(\"R[0]C8\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:B, 2, FALSE)"),
+                    SheetUtils.FormulaCell(
+                        $"=VLOOKUP(INDIRECT(\"R[0]C4\", FALSE), '__{sheetsRef.SheetName}_items'!A$2:C, 2, FALSE)"),
+                    SheetUtils.NumberCell(bonus),
+                    SheetUtils.FormulaCell("=IFNA(INDIRECT(\"R[0]C[-2]\", FALSE)) + INDIRECT(\"R[0]C[-1]\", FALSE)"),
+                })
+            }
+        }, sheetsRef.SpreadsheetId).ExecuteAsync();
+    }
+
+    #endregion
+
+    #region === Utils ===
+
+    public async Task RemoveRow(string spreadsheetId, int sheetId, int rowNumber)
+    {
+        await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
+        {
+            Requests = new[]
+            {
+                new Request()
+                {
+                    DeleteDimension = new DeleteDimensionRequest()
+                    {
+                        Range = new DimensionRange()
+                        {
+                            Dimension = "ROWS", SheetId = sheetId,
+                            StartIndex = rowNumber + 1, EndIndex = rowNumber + 2,
+                        }
+                    }
+                }
+            }
+        }, spreadsheetId).ExecuteAsync();
+    }
+
+    #endregion
+
+   
+    private static UpdateCellsRequest AddHeaderRow(BatchUpdateSpreadsheetResponse createBatch, int index,
+        params string[] header)
     {
         return new UpdateCellsRequest()
         {
-            Start = new GridCoordinate() { ColumnIndex = 0, RowIndex = 0, SheetId = createBatch.Replies[index].AddSheet.Properties.SheetId },
+            Start = new GridCoordinate()
+                { ColumnIndex = 0, RowIndex = 0, SheetId = createBatch.Replies[index].AddSheet.Properties.SheetId },
             Fields = "*", Rows = new[]
             {
                 new RowData { Values = GetHeaderCells(header).ToList() }
@@ -184,7 +281,8 @@ public class SpreadsheetService(string googleCredentialsFile)
         };
     }
 
-    private static AddSheetRequest CreateSheet(string sheetName, string name, int? columnCount = null, int? frozenRowCount = 1)
+    private static AddSheetRequest CreateSheet(string sheetName, string name, int? columnCount = null,
+        int? frozenRowCount = 1)
     {
         return new AddSheetRequest()
         {

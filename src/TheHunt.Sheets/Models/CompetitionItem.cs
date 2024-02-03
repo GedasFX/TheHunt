@@ -1,7 +1,7 @@
 ﻿namespace TheHunt.Sheets.Models;
 
-public record CompetitionUser
+public record CompetitionItem
 {
     public int RowIdx { get; init; }
-    public ulong UserId { get; init; }
+    public string Name { get; init; } = null!;
 }

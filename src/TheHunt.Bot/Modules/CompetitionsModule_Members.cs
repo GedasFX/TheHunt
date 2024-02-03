@@ -25,14 +25,15 @@ public partial class CompetitionsModule
         {
             await DeferAsync(ephemeral: true);
 
-            if (await sheetQueryService.GetCompetitionMember(Context.Channel.Id, user.Id) != null)
+            var competition = await competitionsQueryService.GetCompetition(Context.Channel.Id) ??
+                              throw EntityNotFoundException.CompetitionNotFound;
+
+            if (await sheetQueryService.GetCompetitionMember(competition.Spreadsheet, user.Id) != null)
                 throw new EntityValidationException(
                     $"{MentionUtils.MentionUser(user.Id)} is already part of the competition.");
 
-            var sheetRef = (await competitionsQueryService.GetSpreadsheetRef(Context.Channel.Id))!;
-
-            await sheetService.AddMember(sheetRef, user.Id, user.DisplayName, team);
-            sheetQueryService.InvalidateCache(Context.Channel.Id, "members");
+            await sheetService.AddMember(competition.Spreadsheet, user.Id, user.DisplayName, team);
+            sheetQueryService.ResetCache(competition.Spreadsheet, "members");
 
             await FollowupAsync($"{MentionUtils.MentionUser(user.Id)} was successfully added to the competition.",
                 ephemeral: true);
@@ -46,15 +47,16 @@ public partial class CompetitionsModule
         {
             await DeferAsync(ephemeral: true);
 
-            var participant = await sheetQueryService.GetCompetitionMember(Context.Channel.Id, user.Id);
+            var competition = await competitionsQueryService.GetCompetition(Context.Channel.Id) ??
+                              throw EntityNotFoundException.CompetitionNotFound;
+
+            var participant = await sheetQueryService.GetCompetitionMember(competition.Spreadsheet, user.Id);
             if (participant == null)
                 throw new EntityValidationException(
                     $"{MentionUtils.MentionUser(user.Id)} is not part of the competition.");
 
-            var sheetRef = (await competitionsQueryService.GetSpreadsheetRef(Context.Channel.Id))!;
-
-            await sheetService.RemoveMember(sheetRef, participant.RowIdx);
-            sheetQueryService.InvalidateCache(Context.Channel.Id, "members");
+            await sheetService.RemoveMember(competition.Spreadsheet, participant.RowIdx);
+            sheetQueryService.ResetCache(competition.Spreadsheet, "members");
 
             await FollowupAsync($"{MentionUtils.MentionUser(user.Id)} was successfully removed from the competition.",
                 ephemeral: true);

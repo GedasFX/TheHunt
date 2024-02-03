@@ -32,5 +32,24 @@ public partial class CompetitionsModule
                 $"Verifier role was updated from {MentionUtils.MentionRole(previousVerifierRoleId)} to {MentionUtils.MentionRole(competition.VerifierRoleId)}.",
                 ephemeral: true);
         }
+
+        [RequireUserPermission(ChannelPermission.ManageChannels)]
+        [SlashCommand("items-restricted", "Prevent submission of unknown items.")]
+        public async Task ItemsRestricted(
+            [Summary(
+                description:
+                "If set to 'true', when verifying an unknown item (not in __xyz_items), verification will fail.")]
+            bool restricted)
+        {
+            var competition = await dbContext.Competitions.FindAsync(Context.Channel.Id) ??
+                              throw EntityNotFoundException.CompetitionNotFound;
+
+            competition.Features.ItemsRestricted = restricted;
+            await dbContext.SaveChangesAsync();
+
+            await RespondAsync(
+                $"When verifying an unknown item (not present in __xyz_items), verification will now {(restricted ? "fail" : "succeed")}.",
+                ephemeral: true);
+        }
     }
 }

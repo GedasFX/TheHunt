@@ -8,8 +8,6 @@
 
     <ItemGroup>
       <PackageReference Include="Google.Apis.Sheets.v4" Version="1.66.0.3148" />
-      <PackageReference Include="NReJSON" Version="4.0.0" />
-      <PackageReference Include="StackExchange.Redis" Version="2.7.17" />
     </ItemGroup>
 
     <ItemGroup>

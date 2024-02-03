@@ -52,7 +52,12 @@ public partial class CompetitionsModule(
     [SlashCommand("reload", "Reloads the competition data from the spreadsheet.")]
     public async Task Reload()
     {
-        spreadsheetQueryService.InvalidateCache(Context.Channel.Id, "members");
+        var competition = await dbContext.Competitions.FindAsync(Context.Channel.Id) ??
+                          throw EntityNotFoundException.CompetitionNotFound;
+
+        spreadsheetQueryService.ResetCache(competition.Spreadsheet, "items");
+        spreadsheetQueryService.ResetCache(competition.Spreadsheet, "members");
+
         await RespondAsync("Configuration reloaded.", ephemeral: true);
     }
 }

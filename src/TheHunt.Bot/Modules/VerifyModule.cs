@@ -8,18 +8,13 @@ using TheHunt.Sheets.Services;
 
 namespace TheHunt.Bot.Modules;
 
-public class VerifyModule : InteractionModuleBase<SocketInteractionContext>
+public class VerifyModule(
+    CompetitionsQueryService competitionsQueryService,
+    SpreadsheetService spreadsheetService,
+    SpreadsheetQueryService spreadsheetQueryService)
+    : InteractionModuleBase<SocketInteractionContext>
 {
-    private readonly CompetitionsQueryService _competitionsQueryService;
-    private readonly SpreadsheetService _spreadsheetService;
-
     private static IEmote VerifiedEmote { get; } = new Emoji("✅");
-
-    public VerifyModule(CompetitionsQueryService competitionsQueryService, SpreadsheetService spreadsheetService)
-    {
-        _competitionsQueryService = competitionsQueryService;
-        _spreadsheetService = spreadsheetService;
-    }
 
     [EnabledInDm(false)]
     [MessageCommand("Verify Submission")]
@@ -58,29 +53,45 @@ public class VerifyModule : InteractionModuleBase<SocketInteractionContext>
             return;
         }
 
-        var competitionVerifierRole = await _competitionsQueryService.GetVerifierRoleId(message.Channel.Id);
-        if (competitionVerifierRole == default)
+        var competition = await competitionsQueryService.GetCompetition(message.Channel.Id);
+        if (competition == default)
         {
-            await FollowupAsync("Unable to verify submission: Channel is not associated with a competition.", ephemeral: true);
-            return;
-        }
-
-        if (!contextGuildUser.Roles.Any(r => r.Id == competitionVerifierRole))
-        {
-            await FollowupAsync(
-                $"Unable to verify submission: Only members in {MentionUtils.MentionRole(competitionVerifierRole)} role can verify submissions.",
+            await FollowupAsync("Unable to verify submission: Channel is not associated with a competition.",
                 ephemeral: true);
             return;
         }
 
-        var sheetsRef = (await _competitionsQueryService.GetSpreadsheetRef(Context.Channel.Id))!;
-        await _spreadsheetService.AddSubmission(sheetsRef!, message.Id, message.GetJumpUrl(), message.Author.Id, Context.User.Id, GetAttachedImageUrl(message),
+        if (!contextGuildUser.Roles.Any(r => r.Id == competition.VerifierRoleId))
+        {
+            await FollowupAsync(
+                $"Unable to verify submission: Only members in {MentionUtils.MentionRole(competition.VerifierRoleId)} role can verify submissions.",
+                ephemeral: true);
+            return;
+        }
+
+        var sheetsRef = (await competitionsQueryService.GetSpreadsheetRef(Context.Channel.Id))!;
+
+        if (competition.Features.ItemsRestricted &&
+            !await spreadsheetQueryService.VerifyItemExists(competition.Spreadsheet, modal.Item))
+        {
+            await FollowupAsync($"Restricted items: Item with name '{modal.Item}' was not found.",
+                components: ((SocketGuildUser)Context.User).GuildPermissions.Has(GuildPermission.ManageChannels) &&
+                            modal.Item?.Length is > 0 and < 99 && !modal.Item.Contains('|')
+                    ? new ComponentBuilder().WithButton(label: "Add item", emote: new Emoji("➕"),
+                        customId: $"i:{modal.Item.Replace(' ', '|')}").Build()
+                    : null);
+            return;
+        }
+
+        await spreadsheetService.AddSubmission(sheetsRef!, message.Id, message.GetJumpUrl(), message.Author.Id,
+            Context.User.Id, GetAttachedImageUrl(message),
             message.Timestamp.UtcDateTime, modal.Item, int.TryParse(modal.Bonus, out var bonus) ? bonus : 0);
 
         await message.AddReactionAsync(VerifiedEmote);
         await FollowupAsync("Submission verified successfully!", ephemeral: true,
             components: new ComponentBuilder().AddRow(new ActionRowBuilder()
-                .WithSpreadsheetRefButton("Open Google Sheets", "📑", sheetsRef.SpreadsheetId, sheetsRef.Sheets.Submissions)).Build());
+                .WithSpreadsheetRefButton("Open Google Sheets", "📑", sheetsRef.SpreadsheetId,
+                    sheetsRef.Sheets.Submissions)).Build());
     }
 
     private static string? GetAttachedImageUrl(IMessage message)

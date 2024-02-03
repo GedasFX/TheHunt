@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using StackExchange.Redis;
 using TheHunt.Bot;
 using TheHunt.Bot.Extensions;
 using TheHunt.Bot.Utils;
@@ -35,9 +34,6 @@ serviceCollection.AddDbContext<AppDbContext>(o => o
         .EnableSensitiveDataLogging()
 #endif
 );
-
-serviceCollection.AddSingleton<IConnectionMultiplexer>(_ =>
-    ConnectionMultiplexer.Connect(configuration["Redis:Configuration"]!));
 
 serviceCollection.AddModule<BotModule>(configuration)
     .AddModule<SheetsModule>(configuration)
