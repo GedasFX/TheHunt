@@ -11,5 +11,6 @@ public class SheetsModule : Module
     {
         services.AddSingleton(_ => new SpreadsheetService("google.json"));
         services.AddScoped<SpreadsheetQueryService>();
+        services.AddMemoryCache();
     }
 }

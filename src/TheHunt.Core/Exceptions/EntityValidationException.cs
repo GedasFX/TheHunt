@@ -23,10 +23,4 @@ public class EntityValidationException : Exception
     public EntityValidationException(string message, Exception inner) : base(message, inner)
     {
     }
-
-    protected EntityValidationException(
-        SerializationInfo info,
-        StreamingContext context) : base(info, context)
-    {
-    }
 }

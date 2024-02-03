@@ -21,21 +21,6 @@ public static class DiscordEventHandler
                 message.Exception, delegate { return message.ToString(); });
             return Task.CompletedTask;
         };
-
-        client.ChannelDestroyed += async channel =>
-        {
-            if (channel is not ITextChannel)
-                return;
-
-            await using var scope = serviceProvider.CreateAsyncScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-            if (await dbContext.Competitions.AnyAsync(c => c.ChannelId == channel.Id))
-            {
-                dbContext.Competitions.Remove(new Competition() { ChannelId = channel.Id });
-                await dbContext.SaveChangesAsync();
-            }
-        };
     }
 
     public static async Task RegisterInteractionsAsync(DiscordSocketClient discord, IServiceProvider serviceProvider)
@@ -43,7 +28,7 @@ public static class DiscordEventHandler
         var interactionService = new InteractionService(discord, new InteractionServiceConfig()
         {
             UseCompiledLambda = true, DefaultRunMode = RunMode.Async, LogLevel = LogSeverity.Verbose,
-            AutoServiceScopes = true, InteractionCustomIdDelimiters = new[] { ' ' }
+            AutoServiceScopes = true, InteractionCustomIdDelimiters = [' ']
         });
         await interactionService.AddModulesAsync(typeof(Program).Assembly, serviceProvider);
 

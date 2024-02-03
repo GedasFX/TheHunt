@@ -4,14 +4,9 @@ using TheHunt.Data.Models;
 
 namespace TheHunt.Data;
 
-public class AppDbContext : DbContext
+public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<Competition> Competitions => Set<Competition>();
-
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
-    {
-    }
-
 
     public static async Task Initialize(IServiceProvider serviceProvider)
     {

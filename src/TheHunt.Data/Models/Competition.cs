@@ -14,6 +14,8 @@ public class Competition
     public ulong VerifierRoleId { get; set; }
 
     public SheetsRef Spreadsheet { get; set; } = null!;
+
+    public Features Features { get; set; } = null!;
 }
 
 [Owned]
@@ -35,9 +37,6 @@ public class SheetsRef
     {
         [Column("sheet_overview")]
         public int Overview { get; set; }
-        
-        [Column("sheet_config")]
-        public int Config { get; set; }
 
         [Column("sheet_members")]
         public int Members { get; set; }
@@ -48,4 +47,11 @@ public class SheetsRef
         [Column("sheet_submissions")]
         public int Submissions { get; set; }
     }
+}
+
+[Owned]
+public class Features
+{
+    [Column("feature_items_restricted")]
+    public bool ItemsRestricted { get; set; }
 }

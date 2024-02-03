@@ -1,99 +1,61 @@
-﻿using System.Text.Json;
-using Discord;
-using NReJSON;
-using StackExchange.Redis;
-using TheHunt.Core.Exceptions;
+﻿using Microsoft.Extensions.Caching.Memory;
 using TheHunt.Data.Models;
-using TheHunt.Data.Services;
 using TheHunt.Sheets.Models;
 
 namespace TheHunt.Sheets.Services;
 
-public class SpreadsheetQueryService
+public class SpreadsheetQueryService(SpreadsheetService spreadsheetService, IMemoryCache cache)
 {
-    private readonly SpreadsheetService _spreadsheetService;
-    private readonly CompetitionsQueryService _competitionsQueryService;
-    private readonly IDatabase _cache;
+    private static TimeSpan CacheExpiration { get; } = TimeSpan.FromMinutes(1);
 
-    private static TimeSpan CacheExpiry { get; } = TimeSpan.FromMinutes(15);
+    #region Members
 
-    public SpreadsheetQueryService(SpreadsheetService spreadsheetService, CompetitionsQueryService competitionsQueryService, IConnectionMultiplexer cache)
+    public async Task<IReadOnlyDictionary<ulong, CompetitionUser>> GetCompetitionMembers(SheetsRef sheetRef) =>
+        (await UseCache($"__{sheetRef.SpreadsheetId}_members",
+            async () => (await spreadsheetService.GetMembers(sheetRef)).ToDictionary(c => c.UserId)))!;
+
+    public async Task<CompetitionUser?> GetCompetitionMember(SheetsRef sheetRef, ulong userId)
     {
-        NReJSONSerializer.SerializerProxy = new SystemTextJsonSerializerProxy();
-
-        _spreadsheetService = spreadsheetService;
-        _competitionsQueryService = competitionsQueryService;
-        _cache = cache.GetDatabase();
+        return (await GetCompetitionMembers(sheetRef)).TryGetValue(userId, out var val) ? val : null;
     }
 
-    public async Task<IReadOnlyDictionary<ulong, CompetitionUser>> GetCompetitionMembers(ulong competitionId)
+    #endregion
+
+    #region Items
+
+    public async Task<IReadOnlyDictionary<string, CompetitionItem>> GetCompetitionItems(SheetsRef sheetRef) =>
+        (await UseCache($"__{sheetRef.SpreadsheetId}_items",
+            async () => (await spreadsheetService.GetItems(sheetRef)).ToDictionary(c => c.Name)))!;
+
+    public async Task<CompetitionItem?> GetCompetitionItem(SheetsRef sheetRef, string name)
     {
-        return (await UseCache($"__{competitionId}_members", "$", async () =>
-        {
-            var sheetRef = await _competitionsQueryService.GetSpreadsheetRef(competitionId)
-                           ?? throw new EntityValidationException("Channel does not have an active competition.");
-            return (await _spreadsheetService.GetMembers(sheetRef)).ToDictionary(c => c.UserId, c => c);
-        }))!;
+        return (await GetCompetitionItems(sheetRef)).TryGetValue(name, out var val) ? val : null;
     }
 
-    public async Task<CompetitionUser?> GetCompetitionMember(ulong competitionId, ulong userId)
+    public async Task<bool> VerifyItemExists(SheetsRef sheetRef, string? itemName)
     {
-        var result = await _cache.JsonGetAsync<CompetitionUser>($"__{competitionId}_members", $"$[\"{userId}\"]");
-
-        if (!result.InnerResult.IsNull)
-            return result.FirstOrDefault();
-
-        return (await GetCompetitionMembers(competitionId)).TryGetValue(userId, out var val) ? val : null;
-    }
-    
-    public async Task<int> GetCompetitionMembersCount(ulong competitionId)
-    {
-        var result = await _cache.JsonObjectLengthAsync($"__{competitionId}_members");
-    
-        if (result != null)
-            return (int)result;
-    
-        return (await GetCompetitionMembers(competitionId)).Count;
-    }
-    
-    public async Task<IReadOnlyList<EmbedFieldBuilder>> GetCompetitionShowFields(SheetsRef sheet)
-    {
-        return await _spreadsheetService.GetCompetitionShowFields(sheet);
+        return itemName != null && (await GetCompetitionItems(sheetRef)).ContainsKey(itemName);
     }
 
-    public void InvalidateCache(ulong competitionId, string cache)
+    #endregion
+
+
+    public void ResetCache(SheetsRef sheetRef, string type)
     {
-        _cache.KeyExpire($"__{competitionId}_{cache}", TimeSpan.Zero, CommandFlags.FireAndForget);
+        cache.Remove($"__{sheetRef.SpreadsheetId}_{type}");
     }
 
-    private async Task<T?> UseCache<T>(string cacheKey, string path, Func<Task<T?>>? fetcher = null)
+    private async Task<T?> UseCache<T>(string cacheKey, Func<Task<T?>>? fetcher = null) where T : class
     {
-        var result = await _cache.JsonGetAsync<T>(cacheKey, "$");
-        if (result.Any())
-            return result.First();
+        if (cache.TryGetValue(cacheKey, out var result))
+            return result as T;
 
         if (fetcher == null)
-            return default;
+            return null;
 
-        var item = await fetcher();
+        result = await fetcher();
 
-        await _cache.JsonSetAsync(cacheKey, item, path);
-        _cache.KeyExpire(cacheKey, CacheExpiry, CommandFlags.FireAndForget);
-
-        return item;
-    }
-
-
-    public sealed class SystemTextJsonSerializerProxy : ISerializerProxy
-    {
-        public TResult? Deserialize<TResult>(RedisResult serializedValue)
-        {
-            return !serializedValue.IsNull ? JsonSerializer.Deserialize<TResult>((string)serializedValue!) : default;
-        }
-
-        public string Serialize<TObjectType>(TObjectType obj)
-        {
-            return JsonSerializer.Serialize(obj);
-        }
+        cache.Set(cacheKey, result, CacheExpiration);
+        return result as T;
     }
 }

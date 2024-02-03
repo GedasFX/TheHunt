@@ -1,28 +1,90 @@
 ﻿using System.Net;
-using Discord;
 using Google;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
 using Google.Apis.Sheets.v4.Data;
 using TheHunt.Core.Exceptions;
+using TheHunt.Core.Extensions;
 using TheHunt.Data.Models;
 using TheHunt.Sheets.Models;
 using TheHunt.Sheets.Utils;
 
 namespace TheHunt.Sheets.Services;
 
-public class SpreadsheetService
+public class SpreadsheetService(string googleCredentialsFile)
 {
-    private readonly SheetsService _service;
-
-    public SpreadsheetService(string googleCredentialsFile)
+    private readonly SheetsService _service = new(new BaseClientService.Initializer
     {
-        _service = new SheetsService(new BaseClientService.Initializer()
+        HttpClientInitializer = GoogleCredential.FromFile(googleCredentialsFile)
+    });
+
+     #region General
+
+    public async Task<SheetsRef> CreateCompetition(string spreadsheetId, string sheetName)
+    {
+        try
         {
-            HttpClientInitializer = GoogleCredential.FromFile(googleCredentialsFile)
-        });
+            var createBatch = await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
+            {
+                Requests = new[]
+                {
+                    new Request { AddSheet = CreateSheet(sheetName, "overview", frozenRowCount: 0) },
+                    new Request { AddSheet = CreateSheet(sheetName, "members", 3) },
+                    new Request { AddSheet = CreateSheet(sheetName, "items", 2) },
+                    new Request { AddSheet = CreateSheet(sheetName, "submissions", 12) },
+                }
+            }, spreadsheetId).ExecuteAsync();
+
+            await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
+            {
+                Requests = new[]
+                {
+                    new Request { UpdateCells = AddHeaderRow(createBatch, 1, "Id", "Name", "Team") },
+                    new Request { UpdateCells = AddHeaderRow(createBatch, 2, "Item Name", "Points Value") },
+                    new Request
+                    {
+                        UpdateCells = AddHeaderRow(createBatch, 3,
+                            "Id", "Image", "Date", "Item", "Team", "Submitter Id", "Submitter", "Verifier Id",
+                            "Verifier", "Points Item", "Points Bonus", "Points Total")
+                    },
+                }
+            }, spreadsheetId).ExecuteAsync();
+
+            return new SheetsRef
+            {
+                SpreadsheetId = spreadsheetId, SheetName = sheetName,
+                Sheets = new SheetsRef.Sheet()
+                {
+                    Overview = (int)createBatch.Replies[0].AddSheet.Properties.SheetId!,
+                    Members = (int)createBatch.Replies[1].AddSheet.Properties.SheetId!,
+                    Items = (int)createBatch.Replies[2].AddSheet.Properties.SheetId!,
+                    Submissions = (int)createBatch.Replies[3].AddSheet.Properties.SheetId!,
+                },
+            };
+        }
+        catch (GoogleApiException e) when (e is
+                                           {
+                                               HttpStatusCode: HttpStatusCode.Forbidden,
+                                               Error.Message: "The caller does not have permission"
+                                           })
+        {
+            throw new EntityValidationException(
+                "The bot does not have permission to edit this spreadsheet.\n" +
+                "Send an invitation to `the-hunt@the-hunt-373015.iam.gserviceaccount.com` with `Editor` permissions.",
+                e);
+        }
+        catch (GoogleApiException e) when (e is { HttpStatusCode: HttpStatusCode.BadRequest })
+        {
+            throw new EntityValidationException(
+                "Error while calling Google Sheets API:\n" +
+                e.Error.Message, e);
+        }
     }
+
+    #endregion
+    
+    #region Members
 
     public async Task<IReadOnlyList<CompetitionUser>> GetMembers(SheetsRef sheet)
     {
@@ -32,26 +94,29 @@ public class SpreadsheetService
             {
                 DataFilters = new[]
                 {
-                    new DataFilter { GridRange = new GridRange { SheetId = sheet.Sheets.Members, StartRowIndex = 1, StartColumnIndex = 0, EndColumnIndex = 1 } }
+                    new DataFilter
+                    {
+                        GridRange = new GridRange
+                        {
+                            SheetId = sheet.Sheets.Members, StartRowIndex = 1, StartColumnIndex = 0, EndColumnIndex = 1
+                        }
+                    }
                 }
             }, sheet.SpreadsheetId).ExecuteAsync();
 
-            return (IReadOnlyList<CompetitionUser>?)data.ValueRanges[0].ValueRange.Values?.Select((t, i) => (List: t, Idx: i)).Where(t => t.List?.Count > 0)
+            return data.ValueRanges[0].ValueRange.Values?
+                       .Select((t, i) => (List: t, Idx: i)).Where(t => t.List?.Count > 0)
                        .Select(t => new CompetitionUser
                        {
                            UserId = ulong.Parse((string)t.List[0]), RowIdx = t.Idx,
-                       }).ToList()
+                       }).AsReadOnlyList()
                    ?? Array.Empty<CompetitionUser>();
         }
         catch (Exception e)
         {
-            throw new EntityValidationException("""
-Members sheet is malformed. This is generally caused by manual edits. To resolve issues, make sure:
-  1. 1st column [id], does not have any duplicate entries.
-  2. 3rd column [role], does not have any invalid values.
-  3. 1st (A) and 3rd (C) columns are [id] and [role].
-  4. There are no rows with missing [id].
-""", e);
+            throw new EntityValidationException(
+                "Members sheet is malformed. Make sure first column consists of only user ids, and you do not have any duplicate entries.",
+                e);
         }
     }
 
@@ -76,6 +141,108 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
         await RemoveRow(sheet.SpreadsheetId, sheet.Sheets.Members, rowNumber);
     }
 
+    #endregion
+
+    #region Items
+
+    public async Task<IReadOnlyList<CompetitionItem>> GetItems(SheetsRef sheet)
+    {
+        try
+        {
+            var data = await _service.Spreadsheets.Values.BatchGetByDataFilter(new BatchGetValuesByDataFilterRequest()
+            {
+                DataFilters = new[]
+                {
+                    new DataFilter
+                    {
+                        GridRange = new GridRange
+                        {
+                            SheetId = sheet.Sheets.Items, StartRowIndex = 1, StartColumnIndex = 0, EndColumnIndex = 1
+                        }
+                    }
+                }
+            }, sheet.SpreadsheetId).ExecuteAsync();
+
+            return data.ValueRanges[0].ValueRange.Values?
+                       .Select((t, i) => (List: t, Idx: i))
+                       .Where(t => t.List?.Count > 0)
+                       .Select(t => (Name: t.List[0] as string, t.Idx))
+                       .Where(t => !string.IsNullOrEmpty(t.Name))
+                       .Select(t => new CompetitionItem
+                       {
+                           Name = t.Name!, RowIdx = t.Idx,
+                       }).AsReadOnlyList()
+                   ?? Array.Empty<CompetitionItem>();
+        }
+        catch (Exception e)
+        {
+            throw new EntityValidationException(
+                "Items sheet is malformed. Make sure first column consists of only item names, and you do not have any duplicate entries.",
+                e);
+        }
+    }
+
+    public async Task AddItem(SheetsRef sheetsRef, string name, int pointsValue = 0)
+    {
+        await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
+        {
+            Requests = new[]
+            {
+                SheetUtils.AppendRow(sheetsRef.Sheets.Items, new[]
+                {
+                    SheetUtils.StringCell(name),
+                    SheetUtils.NumberCell(pointsValue),
+                })
+            }
+        }, sheetsRef.SpreadsheetId).ExecuteAsync();
+    }
+    
+    public async Task RemoveItem(SheetsRef sheet, int rowNumber)
+    {
+        await RemoveRow(sheet.SpreadsheetId, sheet.Sheets.Items, rowNumber);
+    }
+
+    #endregion
+
+    #region Submissions
+
+    public async Task AddSubmission(SheetsRef sheetsRef, ulong submissionId, string submissionUrl, ulong submitterId,
+        ulong verifierId, string? imageUrl,
+        DateTime date, string? item, int bonus)
+    {
+        await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
+        {
+            Requests = new[]
+            {
+                SheetUtils.AppendRow(sheetsRef.Sheets.Submissions, new[]
+                {
+                    SheetUtils.FormulaCell($"=HYPERLINK(\"{submissionUrl}\", \"{submissionId}\")"),
+                    SheetUtils.FormulaCell(imageUrl != null
+                        ? $"=HYPERLINK(\"{imageUrl}\", IMAGE(\"{imageUrl}\"))"
+                        : null),
+                    SheetUtils.FormulaCell(date.ToString("=DATE(yyyy,MM,dd) + TI\\ME(HH,mm,ss)")),
+                    SheetUtils.StringCell(item),
+                    SheetUtils.FormulaCell(
+                        $"=IF(ISBLANK(VLOOKUP(INDIRECT(\"R[0]C6\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:D, 3, FALSE)), INDIRECT(\"R[0]C7\", FALSE), VLOOKUP(INDIRECT(\"R[0]C6\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:D, 3, FALSE))"),
+                    SheetUtils.StringCell(submitterId.ToString()),
+                    SheetUtils.FormulaCell(
+                        $"=VLOOKUP(INDIRECT(\"R[0]C6\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:B, 2, FALSE)"),
+                    SheetUtils.StringCell(verifierId.ToString()),
+                    SheetUtils.FormulaCell(
+                        $"=VLOOKUP(INDIRECT(\"R[0]C8\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:B, 2, FALSE)"),
+                    SheetUtils.FormulaCell(
+                        $"=VLOOKUP(INDIRECT(\"R[0]C4\", FALSE), '__{sheetsRef.SheetName}_items'!A$2:C, 2, FALSE)"),
+                    SheetUtils.NumberCell(bonus),
+                    SheetUtils.FormulaCell("=IFNA(INDIRECT(\"R[0]C[-2]\", FALSE)) + INDIRECT(\"R[0]C[-1]\", FALSE)"),
+                })
+            }
+        }, sheetsRef.SpreadsheetId).ExecuteAsync();
+    }
+
+    #endregion
+
+    #region === Utils ===
+
     public async Task RemoveRow(string spreadsheetId, int sheetId, int rowNumber)
     {
         await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
@@ -97,398 +264,16 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
         }, spreadsheetId).ExecuteAsync();
     }
 
-    public async Task AddSubmission(SheetsRef sheetsRef, ulong submissionId, string submissionUrl, ulong submitterId, ulong verifierId, string? imageUrl,
-        DateTime date, string? item, int bonus)
-    {
-        await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
-        {
-            Requests = new[]
-            {
-                SheetUtils.AppendRow(sheetsRef.Sheets.Submissions, new[]
-                {
-                    SheetUtils.FormulaCell($"=HYPERLINK(\"{submissionUrl}\", \"{submissionId}\")"),
-                    SheetUtils.FormulaCell(imageUrl != null ? $"=HYPERLINK(\"{imageUrl}\", IMAGE(\"{imageUrl}\"))" : null),
-                    SheetUtils.FormulaCell(date.ToString("=DATE(yyyy,MM,dd) + TI\\ME(HH,mm,ss)")),
-                    SheetUtils.StringCell(item),
-                    SheetUtils.FormulaCell(
-                        $"=IF(ISBLANK(VLOOKUP(INDIRECT(\"R[0]C6\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:D, 3, FALSE)), INDIRECT(\"R[0]C7\", FALSE), VLOOKUP(INDIRECT(\"R[0]C6\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:D, 3, FALSE))"),
-                    SheetUtils.StringCell(submitterId.ToString()),
-                    SheetUtils.FormulaCell($"=VLOOKUP(INDIRECT(\"R[0]C6\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:B, 2, FALSE)"),
-                    SheetUtils.StringCell(verifierId.ToString()),
-                    SheetUtils.FormulaCell($"=VLOOKUP(INDIRECT(\"R[0]C8\", FALSE), '__{sheetsRef.SheetName}_members'!A$2:B, 2, FALSE)"),
-                    SheetUtils.FormulaCell($"=VLOOKUP(INDIRECT(\"R[0]C4\", FALSE), '__{sheetsRef.SheetName}_items'!A$2:C, 2, FALSE)"),
-                    SheetUtils.NumberCell(bonus),
-                    SheetUtils.FormulaCell("=IFNA(INDIRECT(\"R[0]C[-2]\", FALSE)) + INDIRECT(\"R[0]C[-1]\", FALSE)"),
-                })
-            }
-        }, sheetsRef.SpreadsheetId).ExecuteAsync();
-    }
+    #endregion
 
-    public async Task<SheetsRef> CreateCompetition(string spreadsheetId, string sheetName)
-    {
-        try
-        {
-            var createBatch = await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
-            {
-                Requests = new[]
-                {
-                    new Request { AddSheet = CreateSheet(sheetName, "overview", frozenRowCount: 0) },
-                    new Request { AddSheet = CreateSheet(sheetName, "config", frozenRowCount: 0) },
-                    new Request { AddSheet = CreateSheet(sheetName, "members", 3) },
-                    new Request { AddSheet = CreateSheet(sheetName, "items", 3) },
-                    new Request { AddSheet = CreateSheet(sheetName, "submissions", 12) },
-                }
-            }, spreadsheetId).ExecuteAsync();
-
-            await _service.Spreadsheets.BatchUpdate(new BatchUpdateSpreadsheetRequest()
-            {
-                Requests = new[]
-                {
-                    new Request { UpdateCells = AddHeaderRow(createBatch, 2, "Id", "Name", "Team") },
-                    new Request { UpdateCells = AddHeaderRow(createBatch, 3, "Item Name", "Points Value", "Part of Set") },
-                    new Request
-                    {
-                        UpdateCells = AddHeaderRow(createBatch, 4, "Id", "Image", "Date", "Item", "Team", "Submitter Id", "Submitter", "Verifier Id",
-                            "Verifier", "Points Item", "Points Bonus", "Points Total")
-                    },
-                    new Request()
-                    {
-                        UpdateCells = new UpdateCellsRequest()
-                        {
-                            Start = new GridCoordinate() { SheetId = createBatch.Replies[1].AddSheet.Properties.SheetId, RowIndex = 0, ColumnIndex = 0 },
-                            Fields = "*",
-                            Rows = new[]
-                            {
-                                new RowData()
-                                {
-                                    Values = new[]
-                                    {
-                                        new CellData()
-                                        {
-                                            UserEnteredFormat = new CellFormat() { TextFormat = new TextFormat() { Bold = true } },
-                                            UserEnteredValue = new ExtendedValue { StringValue = "/competitions show" }
-                                        }
-                                    }
-                                },
-                                new RowData()
-                                {
-                                    Values = new[]
-                                    {
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue
-                                            {
-                                                StringValue =
-                                                    "(Up to) 20 rows in the table below can be configured to show data when users run /competitions show."
-                                            }
-                                        }
-                                    }
-                                },
-                                new RowData()
-                                {
-                                    Values = new[]
-                                    {
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue
-                                            {
-                                                StringValue =
-                                                    "Feel free to edit the provided examples. They are here to show potential ways of using this section."
-                                            }
-                                        }
-                                    }
-                                },
-                                new RowData(),
-                                new RowData()
-                                {
-                                    Values = new[]
-                                    {
-                                        new CellData()
-                                        {
-                                            UserEnteredFormat = new CellFormat() { TextFormat = new TextFormat() { Bold = true } },
-                                            UserEnteredValue = new ExtendedValue { StringValue = "Section Title" }
-                                        },
-                                        new CellData()
-                                        {
-                                            UserEnteredFormat = new CellFormat() { TextFormat = new TextFormat() { Bold = true } },
-                                            UserEnteredValue = new ExtendedValue { StringValue = "Value" }
-                                        },
-                                        new CellData()
-                                        {
-                                            UserEnteredFormat = new CellFormat() { TextFormat = new TextFormat() { Bold = true } },
-                                            UserEnteredValue = new ExtendedValue { StringValue = "Use Short Form?" }
-                                        }
-                                    }
-                                },
-                                new RowData()
-                                {
-                                    Values = new[]
-                                    {
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue { StringValue = "Participants Count" }
-                                        },
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue { FormulaValue = $"=COUNTA('__{sheetName}_members'!A2:A)" }
-                                        },
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue { BoolValue = true }
-                                        }
-                                    }
-                                },
-                                new RowData()
-                                {
-                                    Values = new[]
-                                    {
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue { StringValue = "Submissions Count" }
-                                        },
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue { FormulaValue = $"=COUNTA('__{sheetName}_submissions'!A2:A)" }
-                                        },
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue { BoolValue = true }
-                                        }
-                                    }
-                                },
-                                new RowData()
-                                {
-                                    Values = new[]
-                                    {
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue { StringValue = "Best Participants (Submissions)" }
-                                        },
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue
-                                            {
-                                                FormulaValue =
-                                                    "=IF(NOT(ISBLANK(I8)), \"🥇 `\" & TEXT(J8, \"000\") & \"` <@\" & I8 & \">\", \"N/A\") &" +
-                                                    " IF(NOT(ISBLANK(I9)), \"\n🥈 `\" & TEXT(J9, \"000\") & \"` <@\" & I9 & \">\", \"\") &" +
-                                                    " IF(NOT(ISBLANK(I10)), \"\n🥉 `\" & TEXT(J10, \"000\") & \"` <@\" & I10 & \">\", \"\")"
-                                            }
-                                        },
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue { BoolValue = false }
-                                        }
-                                    }
-                                },
-                                new RowData()
-                                {
-                                    Values = new[]
-                                    {
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue { StringValue = "Best Participants (Points)" }
-                                        },
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue
-                                            {
-                                                FormulaValue =
-                                                    "=IF(NOT(ISBLANK(G8)), \"🥇 `\" & TEXT(H8, \"000\") & \"` <@\" & G8 & \">\", \"N/A\") &" +
-                                                    " IF(NOT(ISBLANK(G9)), \"\n🥈 `\" & TEXT(H9, \"000\") & \"` <@\" & G9 & \">\", \"\") &" +
-                                                    " IF(NOT(ISBLANK(G10)), \"\n🥉 `\" & TEXT(H10, \"000\") & \"` <@\" & G10 & \">\", \"\")"
-                                            }
-                                        },
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue { BoolValue = false }
-                                        }
-                                    }
-                                },
-                                new RowData()
-                                {
-                                    Values = new[]
-                                    {
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue { StringValue = "Best Teams (Submissions)" }
-                                        },
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue
-                                            {
-                                                FormulaValue =
-                                                    "=IF(NOT(ISBLANK(K8)), \"🥇 `\" & TEXT(L8, \"000\") & \"` \" & K8, \"N/A\") &" +
-                                                    " IF(NOT(ISBLANK(K9)), \"\n🥈 `\" & TEXT(L9, \"000\") & \"` \" & K9, \"\") &" +
-                                                    " IF(NOT(ISBLANK(K10)), \"\n🥉 `\" & TEXT(L10, \"000\") & \"` \" & K10, \"\")"
-                                            }
-                                        },
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue { BoolValue = false }
-                                        }
-                                    }
-                                },
-                                new RowData()
-                                {
-                                    Values = new[]
-                                    {
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue { StringValue = "Best Teams (Points)" }
-                                        },
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue
-                                            {
-                                                FormulaValue =
-                                                    "=IF(NOT(ISBLANK(M8)), \"🥇 `\" & TEXT(N8, \"000\") & \"` \" & M8, \"N/A\") &" +
-                                                    " IF(NOT(ISBLANK(M9)), \"\n🥈 `\" & TEXT(N9, \"000\") & \"` \" & M9, \"\") &" +
-                                                    " IF(NOT(ISBLANK(M10)), \"\n🥉 `\" & TEXT(N10, \"000\") & \"` \" & M10, \"\")"
-                                            }
-                                        },
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue { BoolValue = false }
-                                        }
-                                    }
-                                },
-                                new RowData()
-                                {
-                                    Values = new[]
-                                    {
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue { StringValue = "Best Verifiers" }
-                                        },
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue
-                                            {
-                                                FormulaValue =
-                                                    "=IF(NOT(ISBLANK(E8)), \"🥇 `\" & TEXT(F8, \"000\") & \"` <@\" & E8 & \">\", \"N/A\") &" +
-                                                    " IF(NOT(ISBLANK(E9)), \"\n🥈 `\" & TEXT(F9, \"000\") & \"` <@\" & E9 & \">\", \"\") &" +
-                                                    " IF(NOT(ISBLANK(E10)), \"\n🥉 `\" & TEXT(F10, \"000\") & \"` <@\" & E10 & \">\", \"\")"
-                                            }
-                                        },
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue { BoolValue = false }
-                                        }
-                                    }
-                                },
-                            }
-                        }
-                    },
-                    new Request()
-                    {
-                        UpdateCells = new UpdateCellsRequest()
-                        {
-                            Start = new GridCoordinate() { SheetId = createBatch.Replies[1].AddSheet.Properties.SheetId, RowIndex = 4, ColumnIndex = 4 },
-                            Fields = "*",
-                            Rows = new[]
-                            {
-                                new RowData()
-                                {
-                                    Values = new[]
-                                    {
-                                        new CellData()
-                                        {
-                                            UserEnteredFormat = new CellFormat() { TextFormat = new TextFormat() { Bold = true } },
-                                            UserEnteredValue = new ExtendedValue { StringValue = "Playground" }
-                                        },
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue
-                                            {
-                                                StringValue =
-                                                    "Everything to the right of the table (A5:C25), can be used as a playground for intermediate values."
-                                            }
-                                        }
-                                    }
-                                },
-                                new RowData(),
-                                new RowData()
-                                {
-                                    Values = new[]
-                                    {
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue
-                                            {
-                                                FormulaValue =
-                                                    $"=QUERY('__{sheetName}_submissions'!A1:L13, \"SELECT H, COUNT(A) GROUP BY H ORDER BY COUNT(A) DESC LIMIT 3\", 1)"
-                                            }
-                                        },
-                                        new CellData(),
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue
-                                            {
-                                                FormulaValue =
-                                                    $"=QUERY('__{sheetName}_submissions'!A1:L13, \"SELECT F, SUM(L) GROUP BY F ORDER BY SUM(L) DESC LIMIT 3\", 1)"
-                                            }
-                                        },
-                                        new CellData(),
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue
-                                            {
-                                                FormulaValue =
-                                                    $"=QUERY('__{sheetName}_submissions'!A1:L13, \"SELECT F, COUNT(A) GROUP BY F ORDER BY COUNT(A) DESC LIMIT 3\", 1)"
-                                            }
-                                        },
-                                        new CellData(),
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue
-                                            {
-                                                FormulaValue =
-                                                    $"=QUERY('__{sheetName}_submissions'!A1:L13, \"SELECT E, COUNT(A) GROUP BY E ORDER BY COUNT(A) DESC LIMIT 3\", 1)"
-                                            }
-                                        },
-                                        new CellData(),
-                                        new CellData()
-                                        {
-                                            UserEnteredValue = new ExtendedValue
-                                            {
-                                                FormulaValue =
-                                                    $"=QUERY('__{sheetName}_submissions'!A1:L13, \"SELECT E, SUM(L) GROUP BY E ORDER BY SUM(L) DESC LIMIT 3\", 1)"
-                                            }
-                                        },
-                                    }
-                                },
-                            }
-                        }
-                    }
-                }
-            }, spreadsheetId).ExecuteAsync();
-
-            return new SheetsRef
-            {
-                SpreadsheetId = spreadsheetId, SheetName = sheetName,
-                Sheets = new SheetsRef.Sheet()
-                {
-                    Overview = (int)createBatch.Replies[0].AddSheet.Properties.SheetId!,
-                    Config = (int)createBatch.Replies[1].AddSheet.Properties.SheetId!,
-                    Members = (int)createBatch.Replies[2].AddSheet.Properties.SheetId!,
-                    Items = (int)createBatch.Replies[3].AddSheet.Properties.SheetId!,
-                    Submissions = (int)createBatch.Replies[4].AddSheet.Properties.SheetId!,
-                },
-            };
-        }
-        catch (GoogleApiException e) when (e is { HttpStatusCode: HttpStatusCode.Forbidden, Error.Message: "The caller does not have permission" })
-        {
-            throw new EntityValidationException(
-                "The bot does not have permission to edit this spreadsheet.\n" +
-                "Send an invitation to `the-hunt@the-hunt-373015.iam.gserviceaccount.com` with `Editor` permissions.", e);
-        }
-    }
-
-    private static UpdateCellsRequest AddHeaderRow(BatchUpdateSpreadsheetResponse createBatch, int index, params string[] header)
+   
+    private static UpdateCellsRequest AddHeaderRow(BatchUpdateSpreadsheetResponse createBatch, int index,
+        params string[] header)
     {
         return new UpdateCellsRequest()
         {
-            Start = new GridCoordinate() { ColumnIndex = 0, RowIndex = 0, SheetId = createBatch.Replies[index].AddSheet.Properties.SheetId },
+            Start = new GridCoordinate()
+                { ColumnIndex = 0, RowIndex = 0, SheetId = createBatch.Replies[index].AddSheet.Properties.SheetId },
             Fields = "*", Rows = new[]
             {
                 new RowData { Values = GetHeaderCells(header).ToList() }
@@ -496,46 +281,8 @@ Members sheet is malformed. This is generally caused by manual edits. To resolve
         };
     }
 
-    public async Task<IReadOnlyList<EmbedFieldBuilder>> GetCompetitionShowFields(SheetsRef sheet)
-    {
-        try
-        {
-            var data = await _service.Spreadsheets.Values.BatchGetByDataFilter(new BatchGetValuesByDataFilterRequest()
-            {
-                DataFilters = new[]
-                {
-                    new DataFilter
-                    {
-                        GridRange = new GridRange
-                        {
-                            SheetId = sheet.Sheets.Config,
-                            StartRowIndex = 5, EndRowIndex = 25,
-                            StartColumnIndex = 0, EndColumnIndex = 3
-                        }
-                    }
-                }
-            }, sheet.SpreadsheetId).ExecuteAsync();
-
-            return (IReadOnlyList<EmbedFieldBuilder>?)data.ValueRanges[0].ValueRange.Values?.Where(t => t?.Count > 0)
-                       .Select(t => new EmbedFieldBuilder()
-                       {
-                           Name = t.ElementAtOrDefault(0) as string,
-                           Value = t.ElementAtOrDefault(1) as string,
-                           IsInline = !bool.TryParse(t.ElementAtOrDefault(2) as string, out var inline) || inline,
-                       }).ToList()
-                   ?? Array.Empty<EmbedFieldBuilder>();
-        }
-        catch (Exception e)
-        {
-            throw new EntityValidationException("""
-Configuration sheet is malformed. This is generally caused by manual edits. To resolve issues, make sure:
-  1. Section Title is not empty and no more than 256 characters long.
-  2. Value is not empty and no more than 1024 characters in length.
-""", e);
-        }
-    }
-
-    private static AddSheetRequest CreateSheet(string sheetName, string name, int? columnCount = null, int? frozenRowCount = 1)
+    private static AddSheetRequest CreateSheet(string sheetName, string name, int? columnCount = null,
+        int? frozenRowCount = 1)
     {
         return new AddSheetRequest()
         {

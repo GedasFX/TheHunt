@@ -4,4 +4,4 @@ if ($args.Count -ne 1) {
 }
 
 Set-Location "$PSScriptRoot/../"
-dotnet-ef.exe migrations add --project "./TheHunt.Data/TheHunt.Data.csproj" $args[0]
+dotnet-ef.exe migrations add --project "./src/TheHunt.Data/TheHunt.Data.csproj" $args[0]
