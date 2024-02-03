@@ -52,7 +52,7 @@ public class VerifyModule : InteractionModuleBase<SocketInteractionContext>
 
         var message = await Context.Channel.GetMessageAsync(channelId);
 
-        if (await message.GetReactionUsersAsync(VerifiedEmote, 1).Flatten().AnyAsync())
+        if (message.Reactions.TryGetValue(VerifiedEmote, out var dat) && dat.IsMe)
         {
             await FollowupAsync("Submission was already verified.", ephemeral: true);
             return;

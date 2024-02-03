@@ -43,7 +43,7 @@ public static class DiscordEventHandler
         var interactionService = new InteractionService(discord, new InteractionServiceConfig()
         {
             UseCompiledLambda = true, DefaultRunMode = RunMode.Async, LogLevel = LogSeverity.Verbose,
-            AutoServiceScopes = true, InteractionCustomIdDelimiters = new[] { ' ' }
+            AutoServiceScopes = true, InteractionCustomIdDelimiters = [' ']
         });
         await interactionService.AddModulesAsync(typeof(Program).Assembly, serviceProvider);
 

@@ -25,9 +25,7 @@ public partial class CompetitionsModule
                 return;
             }
 
-            await DeferAsync(ephemeral: true);
-
-            await FollowupAsync(
+            await RespondAsync(
                 embed: new EmbedBuilder()
                     .WithTitle(Context.Channel.Name)
                     .WithUrl(FormatUtils.GetSheetUrl(competition.Spreadsheet.SpreadsheetId,
