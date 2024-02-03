@@ -1,28 +1,23 @@
 ﻿using System.Net;
-using Discord;
 using Google;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
 using Google.Apis.Sheets.v4.Data;
 using TheHunt.Core.Exceptions;
+using TheHunt.Core.Extensions;
 using TheHunt.Data.Models;
 using TheHunt.Sheets.Models;
 using TheHunt.Sheets.Utils;
 
 namespace TheHunt.Sheets.Services;
 
-public class SpreadsheetService
+public class SpreadsheetService(string googleCredentialsFile)
 {
-    private readonly SheetsService _service;
-
-    public SpreadsheetService(string googleCredentialsFile)
+    private readonly SheetsService _service = new(new BaseClientService.Initializer
     {
-        _service = new SheetsService(new BaseClientService.Initializer()
-        {
-            HttpClientInitializer = GoogleCredential.FromFile(googleCredentialsFile)
-        });
-    }
+        HttpClientInitializer = GoogleCredential.FromFile(googleCredentialsFile)
+    });
 
     public async Task<IReadOnlyList<CompetitionUser>> GetMembers(SheetsRef sheet)
     {
@@ -36,22 +31,19 @@ public class SpreadsheetService
                 }
             }, sheet.SpreadsheetId).ExecuteAsync();
 
-            return (IReadOnlyList<CompetitionUser>?)data.ValueRanges[0].ValueRange.Values?.Select((t, i) => (List: t, Idx: i)).Where(t => t.List?.Count > 0)
+            return data.ValueRanges[0].ValueRange.Values?
+                       .Select((t, i) => (List: t, Idx: i)).Where(t => t.List?.Count > 0)
                        .Select(t => new CompetitionUser
                        {
                            UserId = ulong.Parse((string)t.List[0]), RowIdx = t.Idx,
-                       }).ToList()
+                       }).AsReadOnlyList()
                    ?? Array.Empty<CompetitionUser>();
         }
         catch (Exception e)
         {
-            throw new EntityValidationException("""
-Members sheet is malformed. This is generally caused by manual edits. To resolve issues, make sure:
-  1. 1st column [id], does not have any duplicate entries.
-  2. 3rd column [role], does not have any invalid values.
-  3. 1st (A) and 3rd (C) columns are [id] and [role].
-  4. There are no rows with missing [id].
-""", e);
+            throw new EntityValidationException(
+                "Members sheet is malformed. Make sure first column consists of only user ids, and you do not have any duplicate entries.",
+                e);
         }
     }
 
