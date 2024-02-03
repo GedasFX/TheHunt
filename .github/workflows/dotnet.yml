@@ -13,16 +13,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+    - uses: actions/checkout@v4
+    - uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
+    - uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     - name: "dotnet: publish"
       run: dotnet publish src/TheHunt.Bot/TheHunt.Bot.csproj --os linux --arch x64 /t:PublishContainer -p:ContainerRegistry=ghcr.io -p:ContainerRepository=${{ github.repository }} -c Release
-    # - name: docker: push
-    #   uses: docker/build-push-action@v5.1.0
-    # - name: Push docker image to DockerHub
-    #   run: |
-    #     docker load < result
-    #     docker push owner/repo:tag
