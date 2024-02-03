@@ -24,6 +24,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Set env
-        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+        run: |
+          VERSION=${GITHUB_REF#refs/*/}
+          echo "RELEASE_TAGS=\"${VERSION:1:1};${VERSION:1:3};${VERSION:1:5};latest"\" >> $GITHUB_ENV
       - name: "dotnet: publish"
-        run: dotnet publish src/TheHunt.Bot/TheHunt.Bot.csproj --os linux --arch x64 /t:PublishContainer -p:ContainerRegistry=ghcr.io -p:ContainerRepository=${{ github.repository }} -p ContainerImageTags='"${RELEASE_VERSION:1:1};${RELEASE_VERSION:1:3};${RELEASE_VERSION:1:5};latest"' -c Release
+        run: dotnet publish src/TheHunt.Bot/TheHunt.Bot.csproj --os linux --arch x64 /t:PublishContainer -p:ContainerRegistry=ghcr.io -p:ContainerRepository=${{ github.repository }} -p ContainerImageTags='"${{ env.RELEASE_TAGS }}"' -c Release
