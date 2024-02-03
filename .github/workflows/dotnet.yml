@@ -19,7 +19,7 @@ jobs:
       with:
         dotnet-version: 8.0.x
     - name: "dotnet: publish"
-      run: dotnet publish --os linux --arch x64 /t:PublishContainer -p:ContainerRegistry=ghcr.io -p:ContainerRepository=${{ github.repository }} -c Release
+      run: dotnet publish src/TheHunt.Bot/TheHunt.Bot.csproj --os linux --arch x64 /t:PublishContainer -p:ContainerRegistry=ghcr.io -p:ContainerRepository=${{ github.repository }} -c Release
     # - name: docker: push
     #   uses: docker/build-push-action@v5.1.0
     # - name: Push docker image to DockerHub
