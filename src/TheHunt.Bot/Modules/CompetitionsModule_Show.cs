@@ -22,13 +22,6 @@ public partial class CompetitionsModule
                 throw EntityNotFoundException.CompetitionNotFound;
 
             await RespondAsync(
-                embed: new EmbedBuilder()
-                    .WithTitle(Context.Channel.Name)
-                    .WithUrl(FormatUtils.GetSheetUrl(competition.Spreadsheet.SpreadsheetId,
-                        competition.Spreadsheet.Sheets.Overview))
-                    .AddField("Verifier Role", MentionUtils.MentionRole(competition.VerifierRoleId))
-                    .WithColor(0xA44200)
-                    .Build(),
                 components: new ComponentBuilder()
                     .AddRow(new ActionRowBuilder()
                         .WithSpreadsheetRefButton("Overview", "📖", competition.Spreadsheet.SpreadsheetId,
@@ -37,6 +30,26 @@ public partial class CompetitionsModule
                             competition.Spreadsheet.Sheets.Submissions))
                     .Build(),
                 ephemeral: !@public);
+        }
+
+        [SlashCommand("show-config", "Provides a high level overview of competition.")]
+        public async Task Config()
+        {
+            var competition = await competitionsQueryService.GetCompetition(Context.Channel.Id);
+            if (competition == null)
+                throw EntityNotFoundException.CompetitionNotFound;
+
+            await RespondAsync(
+                embed: new EmbedBuilder()
+                    .WithTitle(Context.Channel.Name)
+                    .WithUrl(FormatUtils.GetSheetUrl(competition.Spreadsheet.SpreadsheetId,
+                        competition.Spreadsheet.Sheets.Overview))
+                    .AddField("Verifier Role",
+                        "The role user must be part of to be able to verify submissions.\n" +
+                        $"\\> {MentionUtils.MentionRole(competition.VerifierRoleId)}")
+                    .WithColor(0xA44200)
+                    .Build(),
+                ephemeral: true);
         }
     }
 }
