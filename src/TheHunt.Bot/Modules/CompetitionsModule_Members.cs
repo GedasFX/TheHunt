@@ -1,6 +1,5 @@
 ﻿using Discord;
 using Discord.Interactions;
-using TheHunt.Bot.Utils;
 using TheHunt.Core.Exceptions;
 using TheHunt.Data.Services;
 using TheHunt.Sheets.Services;
@@ -10,19 +9,12 @@ namespace TheHunt.Bot.Modules;
 public partial class CompetitionsModule
 {
     [Group("members", "Provides tools for managing competition members.")]
-    public class CompetitionsMembersModule : InteractionModuleBase<SocketInteractionContext>
+    public class CompetitionsMembersModule(
+        SpreadsheetService sheetService,
+        SpreadsheetQueryService sheetQueryService,
+        CompetitionsQueryService competitionsQueryService)
+        : InteractionModuleBase<SocketInteractionContext>
     {
-        private readonly SpreadsheetService _sheet;
-        private readonly SpreadsheetQueryService _queryService;
-        private readonly CompetitionsQueryService _competitionsQueryService;
-
-        public CompetitionsMembersModule(SpreadsheetService sheet, SpreadsheetQueryService queryService, CompetitionsQueryService competitionsQueryService)
-        {
-            _sheet = sheet;
-            _queryService = queryService;
-            _competitionsQueryService = competitionsQueryService;
-        }
-
         [RequireUserPermission(ChannelPermission.ManageChannels)]
         [SlashCommand("invite", "Adds a user to the competition.")]
         public async Task Invite(
@@ -33,18 +25,17 @@ public partial class CompetitionsModule
         {
             await DeferAsync(ephemeral: true);
 
-            if (await _queryService.GetCompetitionMember(Context.Channel.Id, user.Id) != null)
-                throw new EntityValidationException($"<@{user.Id}> is already part of the competition.");
+            if (await sheetQueryService.GetCompetitionMember(Context.Channel.Id, user.Id) != null)
+                throw new EntityValidationException(
+                    $"{MentionUtils.MentionUser(user.Id)} is already part of the competition.");
 
-            var sheetRef = (await _competitionsQueryService.GetSpreadsheetRef(Context.Channel.Id))!;
+            var sheetRef = (await competitionsQueryService.GetSpreadsheetRef(Context.Channel.Id))!;
 
-            await _sheet.AddMember(sheetRef, user.Id, user.DisplayName, team);
-            _queryService.InvalidateCache(Context.Channel.Id, "members");
+            await sheetService.AddMember(sheetRef, user.Id, user.DisplayName, team);
+            sheetQueryService.InvalidateCache(Context.Channel.Id, "members");
 
-            await FollowupAsync($"<@{user.Id}> was successfully added to the competition.", ephemeral: true,
-                components: new ComponentBuilder().AddRow(new ActionRowBuilder()
-                    .WithSpreadsheetRefButton("Open Google Sheets", "📑", sheetRef.SpreadsheetId, sheetRef.Sheets.Members)).Build());
-            await FollowupAsync($"<@{Context.User.Id}> added <@{user.Id}> to the competition.");
+            await FollowupAsync($"{MentionUtils.MentionUser(user.Id)} was successfully added to the competition.",
+                ephemeral: true);
         }
 
         [RequireUserPermission(ChannelPermission.ManageChannels)]
@@ -55,19 +46,18 @@ public partial class CompetitionsModule
         {
             await DeferAsync(ephemeral: true);
 
-            var participant = await _queryService.GetCompetitionMember(Context.Channel.Id, user.Id);
+            var participant = await sheetQueryService.GetCompetitionMember(Context.Channel.Id, user.Id);
             if (participant == null)
-                throw new EntityValidationException($"<@{user.Id}> is not part of the competition.");
+                throw new EntityValidationException(
+                    $"{MentionUtils.MentionUser(user.Id)} is not part of the competition.");
 
-            var sheetRef = (await _competitionsQueryService.GetSpreadsheetRef(Context.Channel.Id))!;
+            var sheetRef = (await competitionsQueryService.GetSpreadsheetRef(Context.Channel.Id))!;
 
-            await _sheet.RemoveMember(sheetRef, participant.RowIdx);
-            _queryService.InvalidateCache(Context.Channel.Id, "members");
+            await sheetService.RemoveMember(sheetRef, participant.RowIdx);
+            sheetQueryService.InvalidateCache(Context.Channel.Id, "members");
 
-            await FollowupAsync($"<@{user.Id}> was successfully removed from the competition.", ephemeral: true,
-                components: new ComponentBuilder().AddRow(new ActionRowBuilder()
-                    .WithSpreadsheetRefButton("Open Google Sheets", "📑", sheetRef.SpreadsheetId, sheetRef.Sheets.Members)).Build());
-            await FollowupAsync($"<@{Context.User.Id}> removed <@{user.Id}> from the competition.");
+            await FollowupAsync($"{MentionUtils.MentionUser(user.Id)} was successfully removed from the competition.",
+                ephemeral: true);
         }
     }
 }
