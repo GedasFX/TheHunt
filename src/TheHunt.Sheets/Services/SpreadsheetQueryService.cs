@@ -15,7 +15,7 @@ public class SpreadsheetQueryService
     private readonly CompetitionsQueryService _competitionsQueryService;
     private readonly IDatabase _cache;
 
-    private static TimeSpan CacheExpiry { get; } = TimeSpan.FromMinutes(15);
+    private static TimeSpan CacheExpiry { get; } = TimeSpan.FromMinutes(1);
 
     public SpreadsheetQueryService(SpreadsheetService spreadsheetService, CompetitionsQueryService competitionsQueryService, IConnectionMultiplexer cache)
     {
@@ -38,27 +38,12 @@ public class SpreadsheetQueryService
 
     public async Task<CompetitionUser?> GetCompetitionMember(ulong competitionId, ulong userId)
     {
-        var result = await _cache.JsonGetAsync<CompetitionUser>($"__{competitionId}_members", $"$[\"{userId}\"]");
+        var result = await _cache.JsonGetAsync<CompetitionUser>($"__{competitionId}_members", $"""$["{userId}"]""");
 
         if (!result.InnerResult.IsNull)
             return result.FirstOrDefault();
 
         return (await GetCompetitionMembers(competitionId)).TryGetValue(userId, out var val) ? val : null;
-    }
-    
-    public async Task<int> GetCompetitionMembersCount(ulong competitionId)
-    {
-        var result = await _cache.JsonObjectLengthAsync($"__{competitionId}_members");
-    
-        if (result != null)
-            return (int)result;
-    
-        return (await GetCompetitionMembers(competitionId)).Count;
-    }
-    
-    public async Task<IReadOnlyList<EmbedFieldBuilder>> GetCompetitionShowFields(SheetsRef sheet)
-    {
-        return await _spreadsheetService.GetCompetitionShowFields(sheet);
     }
 
     public void InvalidateCache(ulong competitionId, string cache)
