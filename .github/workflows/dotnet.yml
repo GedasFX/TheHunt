@@ -1,4 +1,4 @@
-# This workflow will build a .NET project
+"# This workflow will build a .NET project
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
 
 name: .NET
@@ -18,8 +18,8 @@ jobs:
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: 8.0.x
-    - name: dotnet: publish
-      run: dotnet publish --os linux --arch x64 /t:PublishContainer -c Release
+    - name: "dotnet: publish"
+      run: dotnet publish --os linux --arch x64 /t:PublishContainer -p:ContainerRegistry=ghcr.io -p:ContainerRepository=${{ github.repository }} -c Release
     # - name: docker: push
     #   uses: docker/build-push-action@v5.1.0
     # - name: Push docker image to DockerHub
