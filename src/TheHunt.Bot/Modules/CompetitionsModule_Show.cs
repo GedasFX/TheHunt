@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Interactions;
 using TheHunt.Bot.Utils;
+using TheHunt.Core.Exceptions;
 using TheHunt.Data.Services;
 
 namespace TheHunt.Bot.Modules;
@@ -18,12 +19,7 @@ public partial class CompetitionsModule
         {
             var competition = await competitionsQueryService.GetCompetition(Context.Channel.Id);
             if (competition == null)
-            {
-                await RespondAsync(
-                    embed: new EmbedBuilder().WithDescription("Requested competition does not exist.").Build(),
-                    ephemeral: true);
-                return;
-            }
+                throw new EntityValidationException("There is no competition associated with this channel");
 
             await RespondAsync(
                 embed: new EmbedBuilder()
