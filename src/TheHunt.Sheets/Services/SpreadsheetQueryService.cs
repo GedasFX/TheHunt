@@ -31,7 +31,7 @@ public class SpreadsheetQueryService
         return (await UseCache($"__{competitionId}_members", "$", async () =>
         {
             var sheetRef = await _competitionsQueryService.GetSpreadsheetRef(competitionId)
-                           ?? throw new EntityValidationException("Channel does not have an active competition.");
+                           ?? throw EntityNotFoundException.CompetitionNotFound;
             return (await _spreadsheetService.GetMembers(sheetRef)).ToDictionary(c => c.UserId, c => c);
         }))!;
     }

@@ -24,9 +24,6 @@ public class EntityNotFoundException : Exception
     {
     }
 
-    protected EntityNotFoundException(
-        SerializationInfo info,
-        StreamingContext context) : base(info, context)
-    {
-    }
+    public static EntityNotFoundException CompetitionNotFound =>
+        new("There is no active competition associated with this channel.");
 }

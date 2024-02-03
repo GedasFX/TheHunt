@@ -126,7 +126,7 @@ public class SpreadsheetService(string googleCredentialsFile)
                 {
                     new Request { AddSheet = CreateSheet(sheetName, "overview", frozenRowCount: 0) },
                     new Request { AddSheet = CreateSheet(sheetName, "members", 3) },
-                    new Request { AddSheet = CreateSheet(sheetName, "items", 3) },
+                    new Request { AddSheet = CreateSheet(sheetName, "items", 2) },
                     new Request { AddSheet = CreateSheet(sheetName, "submissions", 12) },
                 }
             }, spreadsheetId).ExecuteAsync();
@@ -163,6 +163,12 @@ public class SpreadsheetService(string googleCredentialsFile)
             throw new EntityValidationException(
                 "The bot does not have permission to edit this spreadsheet.\n" +
                 "Send an invitation to `the-hunt@the-hunt-373015.iam.gserviceaccount.com` with `Editor` permissions.", e);
+        }
+        catch (GoogleApiException e) when (e is { HttpStatusCode: HttpStatusCode.BadRequest })
+        {
+            throw new EntityValidationException(
+                "Error while calling Google Sheets API:\n" +
+                e.Error.Message, e);
         }
     }
 

@@ -19,7 +19,7 @@ public partial class CompetitionsModule
         {
             var competition = await competitionsQueryService.GetCompetition(Context.Channel.Id);
             if (competition == null)
-                throw new EntityValidationException("There is no competition associated with this channel");
+                throw EntityNotFoundException.CompetitionNotFound;
 
             await RespondAsync(
                 embed: new EmbedBuilder()

@@ -27,8 +27,8 @@ public partial class CompetitionsModule(
     {
         if (spreadsheetId.Length != 44)
         {
-            await RespondAsync("Invalid spreadsheet id. You can extract it from the URL: `https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit#gid=0`");
-            return;
+            throw new EntityValidationException(
+                "Invalid spreadsheet id. You can extract it from the URL: `https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit#gid=0`.");
         }
 
         await DeferAsync(ephemeral: true);
