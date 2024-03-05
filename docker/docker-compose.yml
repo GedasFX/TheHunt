@@ -1,14 +1,11 @@
-version: '3'
+version: "3.8"
 
 services:
   app:
-    image: gedasfx/thehunt:0.1.0
-    restart: always
+    image: ghcr.io/gedasfx/thehunt:1
+    restart: unless-stopped
     environment:
-      POSTGRES_PASSWORD: example
-      
-  redis:
-    image: redislabs/rejson:latest
-    restart: always
-    ports:
-      - "6379:6379"
+      DISCORD_TOKEN: "TOKEN_GOES_HERE"
+    volumes:
+      - ./data/google.json:/app/google.json:ro
+      - ./data/db:/app/data

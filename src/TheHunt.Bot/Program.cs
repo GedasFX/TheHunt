@@ -11,7 +11,6 @@ using TheHunt.Data;
 using TheHunt.Sheets;
 
 var configuration = new ConfigurationBuilder()
-    .AddJsonFile("appsettings.json", true, true)
     .AddEnvironmentVariables()
     .AddUserSecrets<Program>()
     .Build();
@@ -42,7 +41,8 @@ serviceCollection.AddModule<BotModule>(configuration)
 var serviceProvider = serviceCollection.BuildServiceProvider();
 
 var discord = serviceProvider.GetRequiredService<DiscordSocketClient>();
-await discord.StartAsync(configuration["Discord:Token"]!);
+await discord.StartAsync(Environment.GetEnvironmentVariable("DISCORD_TOKEN") ??
+                         throw new InvalidOperationException("Missing DISCORD_TOKEN Environment Variable."));
 
 DiscordEventHandler.Register(discord, serviceProvider);
 await DiscordEventHandler.RegisterInteractionsAsync(discord, serviceProvider);
