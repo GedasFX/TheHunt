@@ -33,6 +33,7 @@ serviceCollection.AddDbContext<AppDbContext>(o => o
         .EnableSensitiveDataLogging()
 #endif
 );
+serviceCollection.AddSingleton<IConfiguration>(configuration);
 
 serviceCollection.AddModule<BotModule>(configuration)
     .AddModule<SheetsModule>(configuration)
@@ -41,7 +42,7 @@ serviceCollection.AddModule<BotModule>(configuration)
 var serviceProvider = serviceCollection.BuildServiceProvider();
 
 var discord = serviceProvider.GetRequiredService<DiscordSocketClient>();
-await discord.StartAsync(Environment.GetEnvironmentVariable("DISCORD_TOKEN") ??
+await discord.StartAsync(configuration["DISCORD_TOKEN"] ??
                          throw new InvalidOperationException("Missing DISCORD_TOKEN Environment Variable."));
 
 DiscordEventHandler.Register(discord, serviceProvider);

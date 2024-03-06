@@ -1,12 +1,10 @@
 ﻿using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using TheHunt.Core.Exceptions;
-using TheHunt.Data;
-using TheHunt.Data.Models;
 
 namespace TheHunt.Bot.Utils;
 
@@ -35,7 +33,9 @@ public static class DiscordEventHandler
         discord.Ready += async () =>
         {
 #if DEBUG
-            await interactionService.RegisterCommandsToGuildAsync(609728856211062785);
+            await interactionService.RegisterCommandsToGuildAsync(ulong.Parse(
+                serviceProvider.GetRequiredService<IConfiguration>()["DISCORD_DEBUG_GUILD_ID"] ??
+                throw new InvalidOperationException("Missing DISCORD_DEBUG_GUILD_ID.")));
 #else
             await interactionService.RegisterCommandsGloballyAsync();
 #endif
@@ -44,7 +44,10 @@ public static class DiscordEventHandler
         var logger = serviceProvider.GetRequiredService<ILogger<InteractionService>>();
         interactionService.Log += message =>
         {
-            if (message.Exception is EntityValidationException)
+            if (message.Exception is InteractionException
+                {
+                    InnerException: EntityValidationException or EntityNotFoundException
+                })
                 return Task.CompletedTask;
 
             logger.Log((LogLevel)(5 - message.Severity), 0, message,
@@ -56,16 +59,23 @@ public static class DiscordEventHandler
         interactionService.ModalCommandExecuted += (_, context, result) => HandleInteractionException(context, result);
         interactionService.SlashCommandExecuted += (_, context, result) => HandleInteractionException(context, result);
 
-        discord.InteractionCreated += c => interactionService.ExecuteCommandAsync(new SocketInteractionContext(discord, c), serviceProvider);
+        discord.InteractionCreated += c =>
+            interactionService.ExecuteCommandAsync(new SocketInteractionContext(discord, c), serviceProvider);
     }
 
     private static async Task HandleInteractionException(IInteractionContext context, IResult result)
     {
-        if (!result.IsSuccess)
+        if (!result.IsSuccess && result is ExecuteResult executeResult)
         {
+            var exception = executeResult.Exception is InteractionException ie
+                ? ie.InnerException
+                : executeResult.Exception;
+
+            var message = exception?.Message ?? result.ErrorReason;
+
             await (context.Interaction.HasResponded
-                ? context.Interaction.FollowupAsync(result.ErrorReason, ephemeral: true)
-                : context.Interaction.RespondAsync(result.ErrorReason, ephemeral: true));
+                ? context.Interaction.FollowupAsync(message, ephemeral: true)
+                : context.Interaction.RespondAsync(message, ephemeral: true));
         }
     }
 }
