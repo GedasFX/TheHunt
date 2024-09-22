@@ -1,21 +1,18 @@
+# syntax=docker/dockerfile:1.7-labs
+
 # https://hub.docker.com/_/microsoft-dotnet
-FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /source
 
-# copy csproj and restore as distinct layers
-COPY src/TheHunt.Bot/*.csproj ./TheHunt.Bot/
-COPY src/TheHunt.Core/*.csproj ./TheHunt.Core/
-COPY src/TheHunt.Data/*.csproj ./TheHunt.Data/
-COPY src/TheHunt.Sheets/*.csproj ./TheHunt.Sheets/
-
-RUN dotnet restore --use-current-runtime TheHunt.Bot
+COPY --parents ./src/**/*.csproj .
+RUN dotnet restore src/TheHunt.Bot
 
 # copy everything else and build app
-COPY src/ .
-RUN dotnet publish -c Release -o /app --use-current-runtime --self-contained false --no-restore TheHunt.Bot
+COPY --parents ./src/**/ .
+RUN dotnet publish -c Release -o /app --no-restore src/TheHunt.Bot
 
-# final stage/image
-FROM mcr.microsoft.com/dotnet/runtime:7.0
+# Build runtime image
+FROM mcr.microsoft.com/dotnet/runtime:8.0-alpine
 WORKDIR /app
 COPY --from=build /app .
 ENTRYPOINT ["dotnet", "TheHunt.Bot.dll"]
