@@ -11,7 +11,8 @@ namespace TheHunt.Bot.Modules;
 public class VerifyModule(
     CompetitionsQueryService competitionsQueryService,
     SpreadsheetService spreadsheetService,
-    SpreadsheetQueryService spreadsheetQueryService)
+    SpreadsheetQueryService spreadsheetQueryService
+)
     : InteractionModuleBase<SocketInteractionContext>
 {
     private static IEmote VerifiedEmote { get; } = new Emoji("✅");
@@ -21,6 +22,13 @@ public class VerifyModule(
     public async Task VerifySubmission(IUserMessage message)
     {
         await RespondWithModalAsync<SubmissionModal>($"submission_create:{message.Id}");
+    }
+
+    [EnabledInDm(false)]
+    [MessageCommand("Quick Verify Submission")]
+    public async Task QuickVerifySubmission(IUserMessage message)
+    {
+        await VerifySubmission(message.Id, message.Content.Split('\n')[0]);
     }
 
     public class SubmissionModal : IModal
@@ -38,14 +46,20 @@ public class VerifyModule(
     }
 
     [ModalInteraction("submission_create:*")]
-    public async Task VerifySubmissionCallback(ulong channelId, SubmissionModal modal)
+    public async Task VerifySubmissionCallback(ulong messageId, SubmissionModal modal)
+    {
+        await VerifySubmission(messageId, modal.Item, int.TryParse(modal.Bonus, out var bonus) ? bonus : 0);
+    }
+
+
+    private async Task VerifySubmission(ulong messageId, string? item = null, int bonusPoints = 0)
     {
         if (Context.User is not SocketGuildUser contextGuildUser)
             throw new UnreachableException("Invoked VerifySubmission in DM Context.");
 
         await DeferAsync(ephemeral: true);
 
-        var message = await Context.Channel.GetMessageAsync(channelId);
+        var message = await Context.Channel.GetMessageAsync(messageId);
 
         if (message.Reactions.TryGetValue(VerifiedEmote, out var dat) && dat.IsMe)
         {
@@ -71,21 +85,21 @@ public class VerifyModule(
 
         var sheetsRef = (await competitionsQueryService.GetSpreadsheetRef(Context.Channel.Id))!;
 
-        if (competition.Features.ItemsRestricted &&
-            !await spreadsheetQueryService.VerifyItemExists(competition.Spreadsheet, modal.Item))
+        if (item != null && competition.Features.ItemsRestricted &&
+            !await spreadsheetQueryService.VerifyItemExists(competition.Spreadsheet, item))
         {
-            await FollowupAsync($"Restricted items: Item with name '{modal.Item}' was not found.",
+            await FollowupAsync($"Restricted items: Item with name '{item}' was not found.",
                 components: ((SocketGuildUser)Context.User).GuildPermissions.Has(GuildPermission.ManageChannels) &&
-                            modal.Item?.Length is > 0 and < 99 && !modal.Item.Contains('|')
+                            item.Length is > 0 and < 99 && !item.Contains('|')
                     ? new ComponentBuilder().WithButton(label: "Add item", emote: new Emoji("➕"),
-                        customId: $"i:{modal.Item.Replace(' ', '|')}").Build()
+                        customId: $"i:{item.Replace(' ', '|')}").Build()
                     : null);
             return;
         }
 
         await spreadsheetService.AddSubmission(sheetsRef!, message.Id, message.GetJumpUrl(), message.Author.Id,
             Context.User.Id, GetAttachedImageUrl(message),
-            message.Timestamp.UtcDateTime, modal.Item, int.TryParse(modal.Bonus, out var bonus) ? bonus : 0);
+            message.Timestamp.UtcDateTime, item, bonusPoints);
 
         await message.AddReactionAsync(VerifiedEmote);
         await FollowupAsync("Submission verified successfully!", ephemeral: true,

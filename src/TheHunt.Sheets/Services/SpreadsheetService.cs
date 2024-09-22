@@ -217,7 +217,7 @@ public class SpreadsheetService(string googleCredentialsFile)
                 SheetUtils.AppendRow(sheetsRef.Sheets.Submissions, new[]
                 {
                     SheetUtils.FormulaCell($"=HYPERLINK(\"{submissionUrl}\", \"{submissionId}\")"),
-                    SheetUtils.StringCell(imageUrl),
+                    SheetUtils.FormulaCell(imageUrl != null ? $"=HYPERLINK(\"{imageUrl}\")" : null),
                     SheetUtils.FormulaCell(date.ToString("=DATE(yyyy,MM,dd) + TI\\ME(HH,mm,ss)")),
                     SheetUtils.StringCell(item),
                     SheetUtils.FormulaCell(

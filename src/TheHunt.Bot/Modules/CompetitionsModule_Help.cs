@@ -77,6 +77,16 @@ In case you would need to delete a submission, remove the '✅' reaction and del
 
 For additional information about manual edits, see `/competitions help manual-edit`.
 """)
+            .AddField("Quick Verifications",
+                """
+                There is also a "Quick Verify Submission" button present. Clicking it would send the same verification request as normal, but will prefill the "item" with the first line of the message contents.
+
+                It works great for cases where the users can help identify what the item they got is. Example:
+                ```
+                Banana Bandanna
+                https://i.imgur.whatever/
+                ```
+                """)
             .Build();
 
         [SlashCommand("verify", "Instructions on how to verify submissions.")]
